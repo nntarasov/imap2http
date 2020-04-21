@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImapToHttpCLI", "ImapToHttpCLI\ImapToHttpCLI.csproj", "{C5D068B7-BB75-4463-B147-BCE700091102}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImapProtocol", "ImapProtocol\ImapProtocol.csproj", "{7A307D65-2A5B-439D-AC38-B970114F5761}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5D068B7-BB75-4463-B147-BCE700091102}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5D068B7-BB75-4463-B147-BCE700091102}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5D068B7-BB75-4463-B147-BCE700091102}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5D068B7-BB75-4463-B147-BCE700091102}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A307D65-2A5B-439D-AC38-B970114F5761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A307D65-2A5B-439D-AC38-B970114F5761}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A307D65-2A5B-439D-AC38-B970114F5761}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A307D65-2A5B-439D-AC38-B970114F5761}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
