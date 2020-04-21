@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using ImapProtocol.Contracts;
@@ -26,10 +27,9 @@ namespace ImapProtocol
         {
             Logger.Print("<< " + command.TrimEnd('\n').TrimEnd('\r'));
             var responseBytes = Encoding.ASCII.GetBytes(command);
-            _tcpController.Write(responseBytes);
-            while (true)
+            if (!_tcpController.Write(responseBytes))
             {
-                Read();
+                throw new Exception("Unable to write response");
             }
         }
         
@@ -38,7 +38,10 @@ namespace ImapProtocol
             string command;
             while (!_commands.TryDequeue(out command))
             {
-                _tcpController.ReadNext();
+                if (!_tcpController.ReadNext())
+                {
+                    throw new Exception("Unable to read command");
+                }
             }
             return command;
         }

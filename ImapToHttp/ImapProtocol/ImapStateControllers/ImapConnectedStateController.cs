@@ -11,10 +11,40 @@ namespace ImapProtocol.ImapStateControllers
         
         protected override bool RunInternal(ImapCommand cmd)
         {
+            LoggerFactory.GetLogger().Print("Greeted");
             var greetingString = "* OK IMAP4rev1 Service Ready\r\n";
-            //Console.Write($"<< {greetingString}");
             Context.CommandProvider.Write(greetingString);
-            return true;
+
+            while (true)
+            {
+                LoggerFactory.GetLogger().Print("wait...");
+                string commandText = Context.CommandProvider.Read();
+                var imapCommand = new ImapCommand(commandText);
+
+                if (imapCommand.Command == "CAPABILITY")
+                {
+                    new ImapCapabilityStateController().Run(Context, imapCommand);
+                }
+
+                else if (imapCommand.Command == "NOOP")
+                {
+                    new ImapNoopStateController().Run(Context, imapCommand);
+                }
+
+                else if (imapCommand.Command == "AUTHENTICATE")
+                {
+                    new ImapAuthenticateController().Run(Context, imapCommand);
+                }
+
+                else if (imapCommand.Command == "LOGOUT")
+                {
+                    Context.CommandProvider.Write("* BYE\r\n");
+                    Context.CommandProvider.Write($"{imapCommand.Tag} OK\r\n");
+                    break;
+                }
+            }
+
+            return false;
         }
     }
 }

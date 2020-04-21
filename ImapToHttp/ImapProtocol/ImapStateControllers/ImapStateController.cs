@@ -14,7 +14,7 @@ namespace ImapProtocol.ImapStateControllers
             context.AddState(new ImapStateItem
             {
                 State = State,
-                Args = cmd.Args,
+                Command = cmd.Command,
                 Tag = cmd.Tag
             });
             return RunInternal(cmd);
