@@ -6,6 +6,8 @@ namespace ImapProtocol.Contracts
         Connected = 1,
         Capability = 2,
         Noop = 3,
-        Authenticate = 4
+        Authenticate = 4,
+        Selected = 5,
+        LSub = 6
     }
 }

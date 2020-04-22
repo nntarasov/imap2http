@@ -7,10 +7,11 @@ namespace ImapProtocol.Contracts
     {
         public string Command { get; set; }
         public string Tag { get; set; }
+        public string Args { get; set; }
 
         public ImapCommand(string command)
         {
-            var match = Regex.Match(command, @"^(?<tag>[^ ]*) (?<cmd>[\w]+)");
+            var match = Regex.Match(command, @"^(?<tag>[^ ]*) (?<cmd>[\w]+)[ ]*(?<args>.*)");
             if (!match.Success)
             {
                 throw new ArgumentException(nameof(command));
@@ -18,6 +19,7 @@ namespace ImapProtocol.Contracts
             
             Tag = match.Groups["tag"].Value;
             Command = match.Groups["cmd"].Value;
+            Args = match.Groups["args"].Value;
         }
 
         public ImapCommand()

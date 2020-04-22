@@ -8,9 +8,10 @@ namespace ImapProtocol.ImapStateControllers
     public class ImapAuthenticateController : ImapStateController
     {
         public override ImapState State { get; } = ImapState.Authenticate;
+
         protected override bool RunInternal(ImapCommand cmd)
         {
-            var mode = Regex.Match(cmd.Command, @"AUTHENTICATE (?<m>\w+)").Groups["m"].Value;
+            var mode = Regex.Match(cmd.Args, @"(?<m>\w+)").Groups["m"].Value;
 
             switch (mode)
             {
@@ -24,7 +25,7 @@ namespace ImapProtocol.ImapStateControllers
                     var identities = credentials.Split('\0');
                     if (identities.Length != 3)
                     {
-                        Context.CommandProvider.Write($"{cmd.Tag} BAD AUTH=PLAIN");
+                        Context.CommandProvider.Write($"{cmd.Tag} BAD AUTH=PLAIN\r\n");
                         return true;
                     }
 
@@ -34,16 +35,36 @@ namespace ImapProtocol.ImapStateControllers
 
                     if (authcid != "ntarasov" && password != "123456")
                     {
-                        Context.CommandProvider.Write($"{cmd.Tag} NO AUTH=PLAIN");
+                        Context.CommandProvider.Write($"{cmd.Tag} NO AUTH=PLAIN\r\n");
                         return true;
                     }
 
                     Context.CommandProvider.Write($"{cmd.Tag} OK AUTH=PLAIN\r\n");
-                    return true;
+                    break;
                 default:
-                    Context.CommandProvider.Write($"{cmd.Tag} BAD");
+                    Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");
                     return true;
             }
+
+            while (true)
+            {
+                var command = Context.CommandProvider.Read();
+                var imapCommand = new ImapCommand(command);
+                if (imapCommand.Command == "LIST")
+                {
+                    new ImapListStateController().Run(Context, imapCommand);
+                }
+                else if (imapCommand.Command == "SELECT")
+                {
+                    new ImapSelectStateController().Run(Context, imapCommand);
+                }
+                else if (imapCommand.Command == "LSUB")
+                {
+                    new ImapLSubStateController().Run(Context, imapCommand);
+                }
+
+                return true;
         }
+    }
     }
 }
