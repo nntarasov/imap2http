@@ -1,20 +1,23 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using ImapProtocol.Contracts;
 
 namespace ImapProtocol
 {
     public class TcpController : ITcpController
     {
+        private readonly ILogger _logger = LoggerFactory.GetLogger();
+        
         private const int BufferLength = 1024;
-        private readonly TcpListener _tcpListener;
-        private TcpSessionContext _tcpContext;
-        public class TcpSessionContext
+        private readonly TcpListener _tcpListener;  
+        
+        public class TcpSessionContext : ITcpSessionContext
         {
+            public int ThreadId { get; set; }
             public TcpClient TcpClient { get; set; }
             public NetworkStream NetworkStream { get; set; }
-            public ITcpCommandController CommandController { get; set; }
         }
 
         public TcpController(string addressString, int port)
@@ -23,26 +26,26 @@ namespace ImapProtocol
             _tcpListener = new TcpListener(address, port);
         }
 
-        public bool ReadNext()
+        public bool ReadNext(ITcpSessionContext tcpContext, ITcpCommandController sender)
         {
-            if (!(_tcpContext.NetworkStream?.CanRead ?? false))
+            if (!(tcpContext.NetworkStream?.CanRead ?? false))
             {
                 return false;
             }
 
             var recvBuffer = new byte[BufferLength];
-            var count = _tcpContext.NetworkStream.Read(recvBuffer, 0, recvBuffer.Length);
-            _tcpContext.CommandController.OnTcpReceive( recvBuffer, 0, count);
+            var count = tcpContext.NetworkStream.Read(recvBuffer, 0, recvBuffer.Length);
+            sender.OnTcpReceive( recvBuffer, 0, count);
             return true;
         }
 
-        public bool Write(byte[] data)
+        public bool Write(ITcpSessionContext tcpContext, byte[] data)
         {
-            if (!(_tcpContext.NetworkStream?.CanWrite ?? false))
+            if (!(tcpContext.NetworkStream?.CanWrite ?? false))
             {
                 return false;
             }
-            _tcpContext.NetworkStream.Write(data);
+            tcpContext.NetworkStream.Write(data);
             return true;
         }
 
@@ -50,37 +53,40 @@ namespace ImapProtocol
         {
             _tcpListener.Start();
             var recvBuffer = new byte[BufferLength];
+            
             while (true)
             {
-                Console.WriteLine("Waiting for a connection...");
+                _logger.Print("Waiting for a connection...");
                 // Perform a blocking call to accept requests.
                 // You could also use server.AcceptSocket() here.
                 var client = _tcpListener.AcceptTcpClient();
-                Console.WriteLine($"Connection establised");
 
-                // Get a stream object for reading and writing
-                NetworkStream stream = client.GetStream();
-                _tcpContext = new TcpSessionContext
-                {
-                    NetworkStream = stream,
-                    TcpClient = client,
-                    CommandController = new TcpCommandController(this)
-                };
-
-                _tcpContext.CommandController.OnTcpConnect();
-
-                /*
-                // Loop to receive all the data sent by the client.
-                int count;
-                while ((count = stream.Read(recvBuffer, 0, recvBuffer.Length)) != 0)
-                {
-                    _tcpContext.CommandController.OnTcpReceive(recvBuffer, 0, count);
-                }*/
-
-                // Shutdown and end connection
-                Console.WriteLine("Connection closed");
-                client.Close();
+                var clientThread = new Thread(StartClient);
+                clientThread.Start(client);
             }
+        }
+
+        private void StartClient(object clientObject)
+        {
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+            
+            _logger.Print($"[{threadId}] Connection establised");
+            var client = (TcpClient) clientObject;
+            // Get a stream object for reading and writing
+            NetworkStream stream = client.GetStream();
+            
+            var tcpContext = new TcpSessionContext
+            {
+                ThreadId = threadId,
+                NetworkStream = stream,
+                TcpClient = client,
+            };
+            var commandController = new TcpCommandController(this, tcpContext);
+
+            commandController.OnTcpConnect();
+            // Shutdown and end connection
+            Console.WriteLine($"[{threadId}] Connection closed");
+            client.Close();
         }
 
         public void Dispose()

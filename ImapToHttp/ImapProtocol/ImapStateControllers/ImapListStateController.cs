@@ -11,7 +11,7 @@ namespace ImapProtocol.ImapStateControllers
         protected override bool RunInternal(ImapCommand cmd)
         {
             var match = Regex.Match(cmd.Args, 
-                @"^""(?<refname>[^""]*)"" ""(?<box>[^""]*)""");
+                @"^[""]{0,1}(?<refname>[^""]*)[""]{0,1} [""]{0,1}(?<box>[^""]*)[""]{0,1}");
             if (!match.Success)
             {
                 Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");

@@ -63,8 +63,14 @@ namespace ImapProtocol.ImapStateControllers
                     new ImapLSubStateController().Run(Context, imapCommand);
                 }
 
-                return true;
+
+                // TODO: REMOVE
+                else if (imapCommand.Command == "CAPABILITY")
+                {
+                    new ImapCapabilityStateController().Run(Context, imapCommand);
+                }
+            }
+            return true;
         }
-    }
     }
 }
