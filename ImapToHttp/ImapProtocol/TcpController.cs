@@ -34,7 +34,10 @@ namespace ImapProtocol
             }
 
             var recvBuffer = new byte[BufferLength];
+            Thread.Yield();
             var count = tcpContext.NetworkStream.Read(recvBuffer, 0, recvBuffer.Length);
+            
+            
             sender.OnTcpReceive( recvBuffer, 0, count);
             return true;
         }

@@ -62,6 +62,34 @@ namespace ImapProtocol.ImapStateControllers
                 {
                     new ImapLSubStateController().Run(Context, imapCommand);
                 }
+                else if (imapCommand.Command == "SUBSCRIBE")
+                {
+                    new ImapSubscribeStateController().Run(Context, imapCommand);
+                }
+                else if (imapCommand.Command == "UNSUBSCRIBE")
+                {
+                    new ImapUnsubscribeStateController().Run(Context, imapCommand);
+                }
+                
+                else if (imapCommand.Command == "CREATE")
+                {
+                    new ImapCreateStateController().Run(Context, imapCommand);
+                }
+                
+                else if (imapCommand.Command == "DELETE")
+                {
+                    new ImapDeleteStateController().Run(Context, imapCommand);
+                }
+                
+                else if (imapCommand.Command == "RENAME")
+                {
+                    new ImapRenameStateController().Run(Context, imapCommand);
+                }
+                
+                else if (imapCommand.Command == "EXAMINE")
+                {
+                    new ImapExamineStateController().Run(Context, imapCommand);
+                }
 
 
                 // TODO: REMOVE
