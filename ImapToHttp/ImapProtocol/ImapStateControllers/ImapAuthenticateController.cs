@@ -46,7 +46,7 @@ namespace ImapProtocol.ImapStateControllers
                     return true;
             }
 
-            while (true)
+            while (Context.CommandProvider.IsSessionAlive)
             {
                 var command = Context.CommandProvider.Read();
                 var imapCommand = new ImapCommand(command);

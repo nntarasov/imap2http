@@ -18,6 +18,7 @@ namespace ImapProtocol.Contracts
         Check = 13,
         Status = 14,
         Expunge = 15,
-        Copy = 16
+        Copy = 16,
+        Fetch = 17
     }
 }

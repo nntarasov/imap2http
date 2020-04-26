@@ -25,28 +25,48 @@ namespace ImapProtocol
             _tcpController = tcpController;
             _sessionContext = sessionContext;
         }
-        
+
+        public bool IsSessionAlive => _sessionContext.IsSessionAlive;
+
         public void Write(string command)
         {
-            Logger.Print("<< " + command.TrimEnd('\n').TrimEnd('\r'));
+            Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}] << " + command.TrimEnd('\n').TrimEnd('\r'));
             var responseBytes = Encoding.ASCII.GetBytes(command);
-            if (!_tcpController.Write(_sessionContext, responseBytes))
+            try
             {
-                throw new Exception("Unable to write response");
+                if (!_tcpController.Write(_sessionContext, responseBytes))
+                {
+                    Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}] Unable to write response");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}] Unable to write response, ex: {ex.Message}");
+                _sessionContext.IsSessionAlive = false;
+                _sessionContext.NetworkStream?.Dispose();
             }
         }
         
         public string Read()
         {
             string command;
-            while (!_commands.TryDequeue(out command))
+            while (!_commands.TryDequeue(out command) && _sessionContext.IsSessionAlive)
             {
-                if (!_tcpController.ReadNext(_sessionContext, this))
+                try
                 {
-                    throw new Exception("Unable to read command");
+                    if (!_tcpController.ReadNext(_sessionContext, this))
+                    {
+                        Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}] Unable to read command");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}] Unable to read command, ex: {ex.Message}");
+                    _sessionContext.IsSessionAlive = false;
+                    _sessionContext.NetworkStream?.Dispose();
                 }
             }
-            return command;
+            return command ?? string.Empty;
         }
 
         public void OnTcpReceive(byte[] bytes, int offset, int count)
@@ -57,13 +77,13 @@ namespace ImapProtocol
             {
                 _commandBuilder.Append(commandParts[0]);
                 _commands.Enqueue(_commandBuilder.ToString());
-                Logger.Print($"[{_sessionContext.ThreadId}]>> " + _commandBuilder.ToString());
+                Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}] >> " + _commandBuilder.ToString());
                 _commandBuilder.Clear();
 
                 for (int i = 1; i < commandParts.Length - 1; i++)
                 {
                     _commands.Enqueue(commandParts[i]);
-                    Logger.Print($"[{_sessionContext.ThreadId}]>> " + commandParts[i]);
+                    Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}]>> " + commandParts[i]);
                 }
             }
             _commandBuilder.Append(commandParts[^1]);
@@ -72,6 +92,7 @@ namespace ImapProtocol
         public void OnTcpConnect()
         {
             _connectedStateController.Run(new ImapContext(this), new ImapCommand());
+            Logger.Print($"[{DateTime.Now.ToString("o")}][{_sessionContext.ThreadId}] Connection closed");
         }
     }
 }

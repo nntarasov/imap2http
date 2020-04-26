@@ -7,5 +7,6 @@ namespace ImapProtocol.Contracts
         int ThreadId { get; set; }
         TcpClient TcpClient { get; set; }
         NetworkStream NetworkStream { get; set; }
+        bool IsSessionAlive { get; set; }
     }
 }

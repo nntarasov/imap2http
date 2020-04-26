@@ -15,7 +15,7 @@ namespace ImapProtocol.ImapStateControllers
             var greetingString = "* OK IMAP4rev1 Service Ready\r\n";
             Context.CommandProvider.Write(greetingString);
 
-            while (true)
+            while (Context.CommandProvider.IsSessionAlive)
             {
                 LoggerFactory.GetLogger().Print("wait...");
                 string commandText = Context.CommandProvider.Read();
@@ -43,7 +43,6 @@ namespace ImapProtocol.ImapStateControllers
                     break;
                 }
             }
-
             return false;
         }
     }

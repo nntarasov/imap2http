@@ -18,6 +18,7 @@ namespace ImapProtocol
             public int ThreadId { get; set; }
             public TcpClient TcpClient { get; set; }
             public NetworkStream NetworkStream { get; set; }
+            public bool IsSessionAlive { get; set; }
         }
 
         public TcpController(string addressString, int port)
@@ -30,11 +31,16 @@ namespace ImapProtocol
         {
             if (!(tcpContext.NetworkStream?.CanRead ?? false))
             {
+                tcpContext.IsSessionAlive = false;
+                tcpContext.NetworkStream?.Dispose();
                 return false;
             }
 
             var recvBuffer = new byte[BufferLength];
-            Thread.Yield();
+            while (!tcpContext.NetworkStream.DataAvailable)
+            {
+                Thread.Yield();
+            }
             var count = tcpContext.NetworkStream.Read(recvBuffer, 0, recvBuffer.Length);
             
             
@@ -46,6 +52,8 @@ namespace ImapProtocol
         {
             if (!(tcpContext.NetworkStream?.CanWrite ?? false))
             {
+                tcpContext.IsSessionAlive = false;
+                tcpContext.NetworkStream?.Dispose();
                 return false;
             }
             tcpContext.NetworkStream.Write(data);
@@ -83,6 +91,7 @@ namespace ImapProtocol
                 ThreadId = threadId,
                 NetworkStream = stream,
                 TcpClient = client,
+                IsSessionAlive = true
             };
             var commandController = new TcpCommandController(this, tcpContext);
 

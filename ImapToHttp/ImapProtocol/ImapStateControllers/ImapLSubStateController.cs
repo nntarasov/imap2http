@@ -23,6 +23,8 @@ namespace ImapProtocol.ImapStateControllers
             var mailboxes = new[]
             {
                 new[] { "INBOX" },
+                new[] { "Junk"},
+                new[] { "Sent"},
                 //new [] { "important", "1"},
                 //new [] { "important" , "2"}
             };

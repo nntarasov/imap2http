@@ -6,5 +6,7 @@ namespace ImapProtocol.Contracts
     {
         void Write(string command);
         string Read();
+        
+        bool IsSessionAlive { get; }
     }
 }
