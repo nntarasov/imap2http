@@ -30,11 +30,11 @@ namespace ImapProtocol.ImapStateControllers
             }
             
             Context.CommandProvider.Write("* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n");
-            Context.CommandProvider.Write("* 4 EXISTS\r\n");
-            Context.CommandProvider.Write("* 4 RECENT\r\n");
+            Context.CommandProvider.Write("* 2 EXISTS\r\n");
+            Context.CommandProvider.Write("* 1 RECENT\r\n");
             Context.CommandProvider.Write("* OK [UIDVALIDITY 1345] UIDVALIDITY\r\n");
             Context.CommandProvider.Write("* OK [UIDNEXT 1345] UIDNEXT\r\n");
-            Context.CommandProvider.Write("* OK [UNSEEN 4] UNSEEN\r\n");
+            Context.CommandProvider.Write("* OK [UNSEEN 2] UNSEEN\r\n");
             Context.CommandProvider.Write($"{cmd.Tag} OK SELECT\r\n");
 
             while (Context.CommandProvider.IsSessionAlive)
@@ -62,11 +62,7 @@ namespace ImapProtocol.ImapStateControllers
                         new ImapFetchStateController().Run(Context, imapCommand);
                         break;
                     case "UID":
-                        imapCommand.Args = imapCommand.Args.Substring(imapCommand.Args.IndexOf(' ') + 1);
-
-                        LoggerFactory.GetLogger().Print(imapCommand.Args);
-                        new ImapFetchStateController().Run(Context, imapCommand);
-                        //Context.CommandProvider.Write($"{imapCommand.Tag} OK\r\n");
+                        new ImapUidStateController().Run(Context, imapCommand);
                         break;
                 }
             }

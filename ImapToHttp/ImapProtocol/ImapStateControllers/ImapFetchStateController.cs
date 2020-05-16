@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using ImapProtocol.Contracts;
+using ImapProtocol.Tools;
 
 namespace ImapProtocol.ImapStateControllers
 {
@@ -91,7 +92,7 @@ namespace ImapProtocol.ImapStateControllers
             public bool IncludeText { get; set; }
             public bool IncludeHeaders { get; set; }
             public long? SizeFrom { get; set; }
-            public long? SizeTo { get; set; }
+            public long? Size { get; set; }
             public bool Peek { get; set; }
             public bool Rfc2822 { get; set; }
             public bool IncludeBodystructure { get; set; }
@@ -127,7 +128,7 @@ namespace ImapProtocol.ImapStateControllers
                 IncludeText = false,
                 IncludeHeaders = false,
                 SizeFrom = null,
-                SizeTo = null,
+                Size = null,
                 Peek = false,
                 Rfc2822 = false,
                 IncludeBodystructure = dataItemsString.Contains("BODYSTRUCTURE"),
@@ -152,7 +153,7 @@ namespace ImapProtocol.ImapStateControllers
 
             // BODY
             var bodyMatch = Regex.Match(dataItemsString, 
-                @"BODY(?<peek>\.PEEK){0,1}(\[(?<section>[^]]*)\](?<partial>[\w.]*))*(<(?<szFrom>\d+)\.(?<szTo>\d+)>)*");
+                @"BODY(?<peek>\.PEEK){0,1}(\[(?<section>[^]]*)\](?<partial>[\w.]*))*(<(?<szFrom>\d+)\.(?<sz>\d+)>)*");
             if (bodyMatch.Success)
             {
                 data.Peek = bodyMatch.Groups["peek"].Success;
@@ -162,10 +163,10 @@ namespace ImapProtocol.ImapStateControllers
                     data.SizeFrom = sizeFrom;
                 }
 
-                if (bodyMatch.Groups["szTo"].Success)
+                if (bodyMatch.Groups["sz"].Success)
                 {
-                    long.TryParse(bodyMatch.Groups["szTo"].Value, out var sizeTo);
-                    data.SizeTo = sizeTo;
+                    long.TryParse(bodyMatch.Groups["sz"].Value, out var size);
+                    data.Size = size;
                 }
 
                 var partsString = bodyMatch.Groups["section"]?.Value;
@@ -222,31 +223,31 @@ namespace ImapProtocol.ImapStateControllers
                 }
                 else
                 {
-                    data.IncludeHeaders = true;
-                    data.IncludeText = true;
-                    data.IncludeMime = true;
+                    data.Rfc2822 = true;
                 }
                 
                 var logger = LoggerFactory.GetLogger();
-                /*logger.Print($"includeBodystructure: {includeBodystructure}");
-                logger.Print($"includeEnvelope: {includeEnvelope}");
-                logger.Print($"includeFlags: {includeFlags}");
-                logger.Print($"includeInternaldate: {includeInternaldate}");
-                logger.Print($"includeRfc822Header: {includeRfc822Header}");
-                logger.Print($"includeRfc822Size: {includeRfc822Size}");
-                logger.Print($"includeRfc822Text: {includeRfc822Text}");
-                logger.Print($"includeUid: {includeUid}");
+                logger.Print($"includeBodystructure: {data.IncludeBodystructure}");
+                logger.Print($"IncludeEnvelope: {data.IncludeEnvelope}");
+                logger.Print($"IncludeFlags: {data.IncludeFlags}");
+                logger.Print($"IncludeInternaldate: {data.IncludeInternaldate}");
+                logger.Print($"IncludeRfc822Header: {data.IncludeRfc822Header}");
+                logger.Print($"IncludeRfc822Size: {data.IncludeRfc822Size}");
+                logger.Print($"IncludeRfc822Text: {data.IncludeRfc822Text}");
+                logger.Print($"IncludeUid: {data.IncludeUid}");
                 
-                logger.Print($"includeMime: {includeMime}");
-                logger.Print($"includeText: {includeText}");
-                logger.Print($"includeHeaders: {includeHeaders}");
-                logger.Print($"szFrom: {szFrom}");
-                logger.Print($"szTo: {szTo}");
-                logger.Print($"peek: {peek}");
-                logger.Print($"rfc2822: {rfc2822}");
+                logger.Print($"IncludeMime: {data.IncludeMime}");
+                logger.Print($"IncludeText: {data.IncludeText}");
+                logger.Print($"IncludeHeaders: {data.IncludeHeaders}");
+                logger.Print($"szFrom: {data.SizeFrom}");
+                logger.Print($"sz: {data.Size}");
+                logger.Print($"peek: {data.Peek}");
+                logger.Print($"rfc2822: {data.Rfc2822}");
                 
-                logger.Print($"headerFields: {headerFields.Aggregate((a, b) => a + " " + b)}");
-                logger.Print($"headerFieldsNot: {headerFieldsNot.Aggregate((a, b) => a + " " + b)}");*/
+                if (data.HeaderFields?.Any() ?? false)
+                    logger.Print($"headerFields: {data.HeaderFields.Aggregate((a, b) => a + " " + b)}");
+                if (data.HeaderFieldsNot?.Any() ?? false)
+                    logger.Print($"headerFieldsNot: {data.HeaderFieldsNot.Aggregate((a, b) => a + " " + b)}");
             }
             return data;
         }
@@ -274,14 +275,26 @@ namespace ImapProtocol.ImapStateControllers
             foreach (var messageId in messageIds)
             {
                 var fetchData = ParseDataItems(dataItemsString);
-                FetchMessage(messageId, fetchData);
+                if (!FetchMessage(messageId, fetchData))
+                {
+                    Context.CommandProvider.Write($"{cmd.Tag} BAD");
+                    return false;
+                }
             }
-            
-            Context.CommandProvider.Write($"{cmd.Tag} OK FETCH\r\n");
+
+            if (Context.States.Any(data => data.State == ImapState.Uid))
+            {
+                Context.CommandProvider.Write($"{cmd.Tag} OK UID FETCH\r\n");
+            }
+            else
+            {
+                Context.CommandProvider.Write($"{cmd.Tag} OK FETCH\r\n");
+            }
+
             return true;
         }
 
-        private void FetchMessage(long messageId, FetchData fetchData)
+        private bool FetchMessage(long messageId, FetchData fetchData)
         {
             /* 3 FETCH (BODY[HEADER,FIELDS ("DATE" "FROM" "SUBJECT")] {112}
             18 Date: Tue, 14 Sep 1999 10:09:50 -0500
@@ -291,43 +304,9 @@ namespace ImapProtocol.ImapStateControllers
             //ParseDataItems(cmd.Args);
 
             var message = Messages[messageId - 1];
-            var messageDate = MessageDts[messageId -1];
-            
-            var lines = message.Split('\n');
-            Dictionary<string, string> messageHeaders = new Dictionary<string, string>();
-            var currentHeaderValue = new StringBuilder();
-            string currentHeaderKey = null;
-            for (int i = 0; i < lines.Length; ++i)
-            {
-                if (lines[i] == string.Empty)
-                {
-                    if (currentHeaderValue.Length != 0)
-                    {
-                        var upperKey = currentHeaderKey.ToUpper();
-                        if (!messageHeaders.ContainsKey(upperKey))
-                        {
-                            messageHeaders.Add(upperKey, currentHeaderValue.ToString());
-                        }
-                    }
-                    break;
-                }
-                if (lines[i].Contains(':'))
-                {
-                    if (currentHeaderKey != null && !messageHeaders.ContainsKey(currentHeaderKey.ToUpper()))
-                    {
-                        messageHeaders.Add(currentHeaderKey.ToUpper(), currentHeaderValue.ToString());
-                    }
+            var messageDate = MessageDts[messageId - 1];
+            var messageData = Rfc2822Parser.Parse(message);
 
-                    currentHeaderKey = lines[i].Split(':')[0];
-                    currentHeaderValue.Clear();
-                    currentHeaderValue.Append(lines[i].Split(':')[1]);
-                }
-                else
-                {
-                    currentHeaderValue.Append(lines[i]);
-                }
-            }
-            
             var messageBuilder = new StringBuilder($"* {messageId} FETCH (");
 
             if (fetchData.IncludeFlags)
@@ -346,24 +325,68 @@ namespace ImapProtocol.ImapStateControllers
             }
             
                         
-            if (fetchData.IncludeUid)
+            if (fetchData.IncludeUid || Context.States.Any(data => data.State == ImapState.Uid))
             {
                 messageBuilder.Append($"UID {messageId} ");
             }
 
-            if (fetchData.IncludeBodystructure || fetchData.IncludeText)
+            if (fetchData.IncludeBodystructure)
             {
                 //("TEXT" "PLAIN" ("CHARSET"
-                // "US-ASCII") NIL NIL "7BIT" 2279 48)
-                var octetCount = message.Length;
-                var linesCount = message.Split('\n').Length;
-                //messageBuilder.Append($"BODYSTRUCTURE (\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\") NIL NIL \"7BIT\" {octetCount} {linesCount}) ");
-                var mm =
-                    "TEXT (<div>Test mail</div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>) MESSAGE/RFC822";
-                messageBuilder.Append($"BODY[TEXT] {{{mm.Length}}}\r\n");
-                messageBuilder.Append(mm.TrimEnd('\n').TrimEnd('\r'));
+                //"UTF-8") NIL NIL "7BIT" 2279 48)
+                var octetCount = messageData.BodyString.Length;
+                var linesCount = messageData.BodyString.Split('\n').Length;
+                messageBuilder.Append($"BODYSTRUCTURE (\"TEXT\" \"PLAIN\" (\"CHARSET\" \"UTF8\") NIL NIL \"7BIT\" {octetCount} {linesCount}) ");
+                //var mm =
+                //    "TEXT (<div>Test mail</div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>) MESSAGE/RFC822";
+
+            }*/
+            
+            if (fetchData.IncludeText)
+            {
+                var octetCount = messageData.BodyString.Length;
+
+                bool isPart = false;
+                bool toEnd = false;
+                long szTo = 0;
+                long szToResponse = 0;
+                if (fetchData.SizeFrom.HasValue && fetchData.Size.HasValue)
+                {
+                    isPart = true;
+                    szTo = fetchData.SizeFrom.Value + fetchData.Size.Value;
+                    if (szTo >= octetCount)
+                    {
+                        toEnd = true;
+                    }
+                    szToResponse = toEnd ? octetCount - fetchData.SizeFrom.Value : fetchData.Size.Value;
+                }
+                string contents;
+                if (isPart)
+                {
+                    if (fetchData.SizeFrom >= octetCount)
+                    {
+                        contents = string.Empty;
+                    }
+                    else if (toEnd)
+                    {
+                        contents = messageData.BodyString.Substring((int) fetchData.SizeFrom.Value);
+                    }
+                    else
+                    {
+                        contents = messageData.BodyString.Substring((int) fetchData.SizeFrom.Value, (int) fetchData.Size);
+                    }
+                }
+                else
+                {
+                    contents = messageData.BodyString;
+                } 
+                
+                string partSize = isPart ? $"{fetchData.SizeFrom}.{szToResponse}"  : "0";
+                messageBuilder.Append($"BODY[TEXT]<{partSize}> {{{contents.Length}}}\r\n");
+                messageBuilder.Append(contents);
                 messageBuilder.Append("\r\n");
             }
+            
             if (fetchData.IncludeHeaders || fetchData.IncludeRfc822Header || fetchData.HeaderFields.Any())
             {
                 if (fetchData.HeaderFields.Any())
@@ -376,7 +399,7 @@ namespace ImapProtocol.ImapStateControllers
                     messageBuilder.Append($"BODY[HEADER] ");
                 }
                 var headerBuilder = new StringBuilder();
-                foreach (var header in  messageHeaders)
+                foreach (var header in  messageData.Headers)
                 {
                     if (!fetchData.HeaderFieldsNot.Contains(header.Key) && 
                         (!fetchData.HeaderFields.Any() || fetchData.HeaderFields.Contains(header.Key)))
@@ -391,61 +414,181 @@ namespace ImapProtocol.ImapStateControllers
                 messageBuilder.Append(headerBuilder);
             }
 
+            if (fetchData.Rfc2822)
+            {
+                var octetCount = messageData.MessageString.Length;
+                messageBuilder.Append($"BODY[] {{{octetCount}}}\r\n");
+                messageBuilder.Append(messageData.MessageString.TrimEnd('\n').TrimEnd('\r'));
+                messageBuilder.Append("\r\n");
+            }
+
             messageBuilder.Append(")\r\n");
             Context.CommandProvider.Write(messageBuilder.ToString());
-
+            return true;
         }
 
 
         private DateTime[] MessageDts = new DateTime[] {DateTime.Now, DateTime.Today, DateTime.Now, DateTime.Now};
-        private string[] Messages = new[] { @"Received: from mxback12q.mail.yandex.net (localhost [127.0.0.1])
-	by mxback12q.mail.yandex.net with LMTP id BH3URSwjv9-av7e8ePR
-	for <nektar97+nt@yandex.ru>; Sat, 25 Apr 2020 21:21:16 +0300
-Received: from forward101q.mail.yandex.net (forward101q.mail.yandex.net [2a02:6b8:c0e:4b:0:640:4012:bb98])
-	by mxback12q.mail.yandex.net (mxback/Yandex) with ESMTP id Vnjg9UR7qO-LFaCVXwC;
-	Sat, 25 Apr 2020 21:21:15 +0300
-X-Yandex-Front: mxback12q.mail.yandex.net
-X-Yandex-TimeMark: 1587838875.957
+        private string[] Messages = new[] {
+            @"Received: from mxfront3q.mail.yandex.net (localhost [127.0.0.1])
+	by mxfront3q.mail.yandex.net with LMTP id XHgJiklRSE-oiZJ5R89
+	for <nektar97@yandex.ru>; Tue, 12 May 2020 00:51:02 +0300
+Received: from mail-ua1-x94a.google.com (mail-ua1-x94a.google.com [2607:f8b0:4864:20::94a])
+	by mxfront3q.mail.yandex.net (mxfront/Yandex) with ESMTPS id EGNfVZSP6P-p1uimQ6O;
+	Tue, 12 May 2020 00:51:01 +0300
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
+	(Client certificate not present)
+Return-Path: 3xMi5XggTCDkij-mZkgtVXXjpion.bjjbgZ.XjhiZfoVm42tViYZs.mp@gaia.bounces.google.com
+X-Yandex-Front: mxfront3q.mail.yandex.net
+X-Yandex-TimeMark: 1589233861.788
+Authentication-Results: mxfront3q.mail.yandex.net; spf=pass (mxfront3q.mail.yandex.net: domain of gaia.bounces.google.com designates 2607:f8b0:4864:20::94a as permitted sender, rule=[ip6:2607:f8b0:4000::/36]) smtp.mail=3xMi5XggTCDkij-mZkgtVXXjpion.bjjbgZ.XjhiZfoVm42tViYZs.mp@gaia.bounces.google.com; dkim=pass header.i=@accounts.google.com
 X-Yandex-Suid-Status: 1 193281561
 X-Yandex-Spam: 1
-Received: from mxback12q.mail.yandex.net (mxback12q.mail.yandex.net [IPv6:2a02:6b8:c0e:1b3:0:640:3818:d096])
-	by forward101q.mail.yandex.net (Yandex) with ESMTP id DF426CF40002
-	for <nektar97+nt@yandex.ru>; Sat, 25 Apr 2020 21:21:15 +0300 (MSK)
-Received: from mxback12q.mail.yandex.net (localhost [127.0.0.1])
-	by mxback12q.mail.yandex.net with LMTP id 8BW8eLLDC4-1dXGvw7r;
-	Sat, 25 Apr 2020 21:21:15 +0300
-Received: from mxback12q.mail.yandex.net (localhost [127.0.0.1])
-	by mxback12q.mail.yandex.net (Yandex) with ESMTP id B47BD6B00F9F;
-	Sat, 25 Apr 2020 21:21:15 +0300 (MSK)
-Received: from localhost (localhost [::1])
-	by mxback12q.mail.yandex.net (mxback/Yandex) with ESMTP id cTvkDo9kaD-LFeaFkst;
-	Sat, 25 Apr 2020 21:21:15 +0300
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yandex.ru; s=mail; t=1587838875;
-	bh=0Z4/ohSw4WuJHscc1BSo+FGKH5WVuzLWcPjCaYu8keo=;
-	h=Message-Id:Date:Subject:To:From;
-	b=gkVLd4XD/xfvk/NLeDKAoGcmf6sFC57ffIyn4FD8lg3E4bCVygL0z7se4ZbaYpOP/
-	 s6IXsvkgbgSgdH0Asbt9x8SoLE7q96KRJHkEdcRglcObfkiPn8WPzn9i0SRX5cDZXm
-	 Q8PvGtGl6qzMf36Qim/n8WqEY4D4xrnZWpdaPLwI=
-Authentication-Results: mxback12q.mail.yandex.net; dkim=pass header.i=@yandex.ru
-X-Yandex-Suid-Status: 1 1130000035882273,1 0
-X-Yandex-Sender-Uid: 70876967
-Received: by vla4-4046ec513d04.qloud-c.yandex.net with HTTP;
-	Sat, 25 Apr 2020 21:21:15 +0300
-From: Nikita Tarasov <mail@ntarasov.ru>
-Envelope-From: nektar97@yandex.ru
-To: mail <mail@ntarasov.ru>
-Subject: Hello world! 
+X-Yandex-Fwd: MTA1ODE4NTY2MzI0MjY4MjQ2NiwxMDIxOTA4NzA1NjUwNTA1ODc4NQ==
+Received: by mail-ua1-x94a.google.com with SMTP id j2so5019010uak.3
+        for <nektar97@yandex.ru>; Mon, 11 May 2020 14:51:01 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=accounts.google.com; s=20161025;
+        h=mime-version:date:feedback-id:message-id:subject:from:to;
+        bh=LAPfTwj/m6QnMFxK+ShetUMWB5u5JMXABnGtBBn11ko=;
+        b=LS3cPTc79Gu8oGmeCpVTL58g+aH6fC52lMjhhbkAZZb6JZZ0GK49ef8sD3lHHP9l3c
+         vB57DunF5XC5uWpA5rnxq0uc8rtf9z68I9bgYsOPPAOyhqCA1vz4oJDZiBF2Wmq9pOgT
+         wzqkGJtQvmjQBhfXGv0FzH+TKNWdPvc+J+1MGfZIHeU+1oXMnifAC3ux7HC9yjxrs5Si
+         2h7uL8AZsbP0tlfbnIe9pulKbz9gE2KtZKaONuZbsep8z/n+Zijo7+JZ4+BIk5hxEwa3
+         fXpVKYZOqi1e0LN9B6+kM/PxDIHf8j++oSiwUZOtwSp521vDUx/uBoYMe2kRyBMYSeTl
+         GT9A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:date:feedback-id:message-id:subject
+         :from:to;
+        bh=LAPfTwj/m6QnMFxK+ShetUMWB5u5JMXABnGtBBn11ko=;
+        b=LQCg89HJx16pPNrYLVOCFGk57GdKkJpqB9/JWwR4wmdUKru0x3LaZKbleqTyAVnwQL
+         xpOkgoB+h4ig/mow479IEEhC8WTV2ov77tmJDHKZP1E+R/KDPeeNel+50sYujAeK9T2H
+         e2nfNvq8sSQgoP5i9TY2mcwiRGkfrAF3SsURgbA32HRAvr4KnSK203a5iCh15RvsX+93
+         v5JBu7JlHOB9aS1J6icI+FKYVz7u9Efyll58HCkfb4ZZjJsG/ZaSp9WjkmFKYFJ8gD0z
+         aN2HqpZc0p+u6iTYMi0kzHReCSplXYr74WJyXzUhcTBn7G+GiG8S8UFqwkHSsOkaoquW
+         ckqw==
+X-Gm-Message-State: AOAM533grkdreBbsy8h5eNQdaWZq6iGtUomX30BG9C+UrYX13ZSAK9wg
+	x0bAqVA/L56P4gtLC7avlCHgmbhmsXcr
+X-Google-Smtp-Source: ABdhPJwMpLAO/+gk1aRsYoMeSiaSsq6TdWJBJHZRI/nNa/Xu1tvhl7WL5i8diXRx3O4ZKvW1hF63P16bj2Loq2YT0sRRug==
 MIME-Version: 1.0
-X-Mailer: Yamail [ http://yandex.ru ] 5.0
-Date: Sat, 25 Apr 2020 21:21:15 +0300
-Message-Id: <578041587838860@mail.yandex.ru>
-Content-Transfer-Encoding: 8bit
-Content-Type: text/html; charset=utf-8
-X-Yandex-Forward: 9d668b532af1baa9ecc9f739379b8bef
-Return-Path: mail@ntarasov.ru
+X-Received: by 2002:a1f:4d03:: with SMTP id a3mr4214163vkb.51.1589233860046;
+ Mon, 11 May 2020 14:51:00 -0700 (PDT)
+Date: Mon, 11 May 2020 21:50:59 +0000 (GMT)
+X-Account-Notification-Type: 31-RECOVERY-anexp#hsc-control_b
+Feedback-ID: 31-RECOVERY-anexp#hsc-control_b:account-notifier
+X-Notifications: 945326ed94400000
+Message-ID: <-qPL00HjYphEnrISrf5v4g.0@notifications.google.com>
+Subject: =?UTF-8?B?0J7Qv9C+0LLQtdGJ0LXQvdC40LUg0L4g0LHQtdC30L7Qv9Cw0YHQvdC+0YHRgtC4INGB?=
+	=?UTF-8?B?0LLRj9C30LDQvdC90L7Qs9C+INCw0LrQutCw0YPQvdGC0LAgR29vZ2xl?=
+From: Google <no-reply@accounts.google.com>
+To: nektar97@yandex.ru
+Content-Type: multipart/alternative; boundary=""000000000000b1715b05a5665777""
 X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
 
-<div>Test mail</div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>",
+Content-Type: text/html; charset=""UTF-8""
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html><html lang=3D""en""><head><meta name=3D""format-detection"" cont=
+ent=3D""email=3Dno""/><meta name=3D""format-detection"" content=3D""date=3Dno""/>=
+<style nonce=3D""XUU54E2GbusQNZpRig13tA"">.awl a {color: #FFFFFF; text-decora=
+tion: none;} .abml a {color: #000000; font-family: Roboto-Medium,Helvetica,=
+Arial,sans-serif; font-weight: bold; text-decoration: none;} .adgl a {color=
+: rgba(0, 0, 0, 0.87); text-decoration: none;} .afal a {color: #b0b0b0; tex=
+t-decoration: none;} @media screen and (min-width: 600px) {.v2sp {padding: =
+6px 30px 0px;} .v2rsp {padding: 0px 10px;}} @media screen and (min-width: 6=
+00px) {.mdv2rw {padding: 40px 40px;}} </style><link href=3D""//fonts.googlea=
+pis.com/css?family=3DGoogle+Sans"" rel=3D""stylesheet"" type=3D""text/css""/></h=
+ead><body style=3D""margin: 0; padding: 0;"" bgcolor=3D""#FFFFFF""><table width=
+=3D""100%"" height=3D""100%"" style=3D""min-width: 348px;"" border=3D""0"" cellspac=
+ing=3D""0"" cellpadding=3D""0"" lang=3D""en""><tr height=3D""32"" style=3D""height: =
+32px;""><td></td></tr><tr align=3D""center""><td><div itemscope itemtype=3D""//=
+schema.org/EmailMessage""><div itemprop=3D""action"" itemscope itemtype=3D""//s=
+chema.org/ViewAction""><link itemprop=3D""url"" href=3D""https://accounts.googl=
+e.com/AccountChooser?Email=3Dnikita.tarasov1997@gmail.com&amp;continue=3Dht=
+tps://myaccount.google.com/alert/nt/1589233859000?rfn%3D31%26rfnc%3D1%26eid=
+%3D-1949072752098066202%26et%3D1%26anexp%3Dhsc-control_b""/><meta itemprop=
+=3D""name"" content=3D""=D0=9F=D1=80=D0=BE=D1=81=D0=BC=D0=BE=D1=82=D1=80=D0=B5=
+=D1=82=D1=8C =D0=B4=D0=B5=D0=B9=D1=81=D1=82=D0=B2=D0=B8=D1=8F""/></div></div=
+><table border=3D""0"" cellspacing=3D""0"" cellpadding=3D""0"" style=3D""padding-b=
+ottom: 20px; max-width: 516px; min-width: 220px;""><tr><td width=3D""8"" style=
+=3D""width: 8px;""></td><td><div style=3D""background-color: #F5F5F5; directio=
+n: ltr; padding: 16px;margin-bottom: 6px;""><table width=3D""100%"" border=3D""=
+0"" cellspacing=3D""0"" cellpadding=3D""0""><tbody><tr><td style=3D""vertical-ali=
+gn: top;""><img height=3D""20"" src=3D""https://www.gstatic.com/accountalerts/e=
+mail/Icon_recovery_x2_20_20.png""></td><td width=3D""13"" style=3D""width: 13px=
+;""></td><td style=3D""direction: ltr;""><span style=3D""font-family: Roboto-Re=
+gular,Helvetica,Arial,sans-serif; font-size: 13px; color: rgba(0,0,0,0.87);=
+ line-height: 1.6; color: rgba(0,0,0,0.54);"">=D0=90=D0=B4=D1=80=D0=B5=D1=81=
+ <a style=3D""text-decoration: none; color: rgba(0,0,0,0.87);"">nektar97@yand=
+ex.ru</a> =D1=83=D0=BA=D0=B0=D0=B7=D0=B0=D0=BD =D0=B2 =D0=BA=D0=B0=D1=87=D0=
+=B5=D1=81=D1=82=D0=B2=D0=B5 =D1=80=D0=B5=D0=B7=D0=B5=D1=80=D0=B2=D0=BD=D0=
+=BE=D0=B3=D0=BE =D0=B4=D0=BB=D1=8F =D0=B2=D0=BE=D1=81=D1=81=D1=82=D0=B0=D0=
+=BD=D0=BE=D0=B2=D0=BB=D0=B5=D0=BD=D0=B8=D1=8F =D0=B4=D0=BE=D1=81=D1=82=D1=
+=83=D0=BF=D0=B0 =D0=BA =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82=D1=83 <a =
+style=3D""text-decoration: none; color: rgba(0,0,0,0.87);"">nikita.tarasov199=
+7@gmail.com</a>.</span> <span><span style=3D""font-family: Roboto-Regular,He=
+lvetica,Arial,sans-serif; font-size: 13px; color: rgba(0,0,0,0.87); line-he=
+ight: 1.6; color: rgba(0,0,0,0.54);"">=D0=AD=D1=82=D0=BE =D0=BD=D0=B5 =D0=92=
+=D0=B0=D1=88 =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82? =D0=9D=D0=B0=D0=B6=
+=D0=BC=D0=B8=D1=82=D0=B5 <a href=3D""https://accounts.google.com/AccountDisa=
+vow?adt=3DAOX8kip424YnwreejXc5XLfo4IyprZe0sqGhcXmwR2FBU21o5K_B8oPJdpAbJLc&a=
+mp;rfn=3D31&amp;anexp=3Dhsc-control_b"" data-meta-key=3D""disavow"" style=3D""t=
+ext-decoration: none; color: #4285F4;"" target=3D""_blank"">=D0=B7=D0=B4=D0=B5=
+=D1=81=D1=8C</a>.</span></span></td></tr></tbody></table></div><div style=
+=3D""border-style: solid; border-width: thin; border-color:#dadce0; border-r=
+adius: 8px; padding: 40px 20px;"" align=3D""center"" class=3D""mdv2rw""><img src=
+=3D""https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_color_=
+74x24dp.png"" width=3D""74"" height=3D""24"" aria-hidden=3D""true"" style=3D""margi=
+n-bottom: 16px;"" alt=3D""Google""><div style=3D""font-family: &#39;Google Sans=
+&#39;,Roboto,RobotoDraft,Helvetica,Arial,sans-serif;border-bottom: thin sol=
+id #dadce0; color: rgba(0,0,0,0.87); line-height: 32px; padding-bottom: 24p=
+x;text-align: center; word-break: break-word;""><div style=3D""font-size: 24p=
+x;"">=D0=92=D1=8B=D0=BF=D0=BE=D0=BB=D0=BD=D0=B5=D0=BD =D0=B2=D1=85=D0=BE=D0=
+=B4 =D0=B2 =D0=92=D0=B0=D1=88 =D1=81=D0=B2=D1=8F=D0=B7=D0=B0=D0=BD=D0=BD=D1=
+=8B=D0=B9 =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82</div><table align=3D""c=
+enter"" style=3D""margin-top:8px;""><tr style=3D""line-height: normal;""><td ali=
+gn=3D""right"" style=3D""padding-right:8px;""><img width=3D""20"" height=3D""20"" s=
+tyle=3D""width: 20px; height: 20px; vertical-align: sub; border-radius: 50%;=
+;"" src=3D""https://lh3.googleusercontent.com/a-/AOh14GjCucR-rYFWBkt5LpWP2nLC=
+-9CrrQ4WXB3iqGtP7w=3Ds96"" alt=3D""""></td><td><a style=3D""font-family: &#39;G=
+oogle Sans&#39;,Roboto,RobotoDraft,Helvetica,Arial,sans-serif;color: rgba(0=
+,0,0,0.87); font-size: 14px; line-height: 20px;"">nikita.tarasov1997@gmail.c=
+om</a></td></tr></table></div><div style=3D""font-family: Roboto-Regular,Hel=
+vetica,Arial,sans-serif; font-size: 14px; color: rgba(0,0,0,0.87); line-hei=
+ght: 20px;padding-top: 20px; text-align: center;"">=D0=92 =D0=92=D0=B0=D1=88=
+ =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82 Google =D1=82=D0=BE=D0=BB=D1=8C=
+=D0=BA=D0=BE =D1=87=D1=82=D0=BE =D0=B2=D1=8B=D0=BF=D0=BE=D0=BB=D0=BD=D0=B5=
+=D0=BD =D0=B2=D1=85=D0=BE=D0=B4 =D0=BD=D0=B0 =D0=BD=D0=BE=D0=B2=D0=BE=D0=BC=
+ =D1=83=D1=81=D1=82=D1=80=D0=BE=D0=B9=D1=81=D1=82=D0=B2=D0=B5 Apple iPhone.=
+ =D0=9C=D1=8B =D1=85=D0=BE=D1=82=D0=B8=D0=BC =D1=83=D0=B1=D0=B5=D0=B4=D0=B8=
+=D1=82=D1=8C=D1=81=D1=8F, =D1=87=D1=82=D0=BE =D1=8D=D1=82=D0=BE =D0=B1=D1=
+=8B=D0=BB=D0=B8 =D0=92=D1=8B.<div style=3D""padding-top: 32px; text-align: c=
+enter;""><a href=3D""https://accounts.google.com/AccountChooser?Email=3Dnikit=
+a.tarasov1997@gmail.com&amp;continue=3Dhttps://myaccount.google.com/alert/n=
+t/1589233859000?rfn%3D31%26rfnc%3D1%26eid%3D-1949072752098066202%26et%3D1%2=
+6anexp%3Dhsc-control_b"" target=3D""_blank"" link-id=3D""main-button-link"" styl=
+e=3D""font-family: &#39;Google Sans&#39;,Roboto,RobotoDraft,Helvetica,Arial,=
+sans-serif; line-height: 16px; color: #ffffff; font-weight: 400; text-decor=
+ation: none;font-size: 14px;display:inline-block;padding: 10px 24px;backgro=
+und-color: #4184F3; border-radius: 5px; min-width: 90px;"">=D0=9F=D0=BE=D1=
+=81=D0=BC=D0=BE=D1=82=D1=80=D0=B5=D1=82=D1=8C =D0=B4=D0=B5=D0=B9=D1=81=D1=
+=82=D0=B2=D0=B8=D1=8F</a></div></div></div><div style=3D""text-align: left;""=
+><div style=3D""font-family: Roboto-Regular,Helvetica,Arial,sans-serif;color=
+: rgba(0,0,0,0.54); font-size: 11px; line-height: 18px; padding-top: 12px; =
+text-align: center;""><div>=D0=AD=D1=82=D0=BE =D1=81=D0=BE=D0=BE=D0=B1=D1=89=
+=D0=B5=D0=BD=D0=B8=D0=B5 =D0=BE =D0=B2=D0=B0=D0=B6=D0=BD=D1=8B=D1=85 =D0=B8=
+=D0=B7=D0=BC=D0=B5=D0=BD=D0=B5=D0=BD=D0=B8=D1=8F=D1=85 =D0=B2 =D0=92=D0=B0=
+=D1=88=D0=B5=D0=BC =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82=D0=B5 =D0=B8 =
+=D1=81=D0=B5=D1=80=D0=B2=D0=B8=D1=81=D0=B0=D1=85 Google.</div><div style=3D=
+""direction: ltr;"">&copy; 2020 Google LLC, <a class=3D""afal"" style=3D""font-f=
+amily: Roboto-Regular,Helvetica,Arial,sans-serif;color: rgba(0,0,0,0.54); f=
+ont-size: 11px; line-height: 18px; padding-top: 12px; text-align: center;"">=
+1600 Amphitheatre Parkway, Mountain View, CA 94043, USA</a></div></div></di=
+v></td><td width=3D""8"" style=3D""width: 8px;""></td></tr></table></td></tr><t=
+r height=3D""32"" style=3D""height: 32px;""><td></td></tr></table></body></html=
+>
+--000000000000b1715b05a5665777--",
             @"Received: from mxback23g.mail.yandex.net (localhost [127.0.0.1])
 	by mxback23g.mail.yandex.net with LMTP id Flrtgaf4AP-i3WimzCS
 	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:07:37 +0300
@@ -493,7 +636,7 @@ X-Yandex-Forward: 9d668b532af1baa9ecc9f739379b8bef
 Return-Path: mail@ntarasov.ru
 X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
 
-<div> </div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>",
+<div> </div><div> </div><div>-- </div><div>124456</div><div> </div>",
             @"Received: from mxback29j.mail.yandex.net (localhost [127.0.0.1])
 	by mxback29j.mail.yandex.net with LMTP id lQMUGk8aTm-ke9BygF1
 	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:08:50 +0300
@@ -541,7 +684,7 @@ X-Yandex-Forward: 9d668b532af1baa9ecc9f739379b8bef
 Return-Path: mail@ntarasov.ru
 X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
 
-<div> </div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>",
+<div> </div><div> </div><div>-- </div><div>12345</div><div> </div>",
             @"Received: from mxback22g.mail.yandex.net (localhost [127.0.0.1])
 	by mxback22g.mail.yandex.net with LMTP id NiTul4T3ij-Eujq6W50
 	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:10:21 +0300
@@ -589,6 +732,6 @@ X-Yandex-Forward: 9d668b532af1baa9ecc9f739379b8bef
 Return-Path: mail@ntarasov.ru
 X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
 
-<div> </div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>"};
+<div> </div><div> </div><div>-- </div><div>12415161</div><div> </div>"};
     }
 }
