@@ -12,6 +12,11 @@ namespace ImapProtocol
             {
                 return;
             }
+
+            public void Print(int threadId, MessageType type, string message)
+            {
+                return;
+            }
         }
         
         public static void SetLogger(ILogger logger)

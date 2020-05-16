@@ -29,18 +29,18 @@ namespace ImapProtocol
 
         public void Write(string command)
         {
-            Logger.Print($"[{_sessionContext.ThreadId}] << " + command.TrimEnd('\n').TrimEnd('\r'));
+            Logger.Print(_sessionContext.ThreadId, MessageType.Out,  command.TrimEnd('\n').TrimEnd('\r'));
             var responseBytes = Encoding.ASCII.GetBytes(command);
             try
             {
                 if (!_tcpController.Write(_sessionContext, responseBytes))
                 {
-                    Logger.Print($"[{_sessionContext.ThreadId}] Unable to write response");
+                    Logger.Print(_sessionContext.ThreadId, MessageType.Error, "Unable to write response");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Print($"[{_sessionContext.ThreadId}] Unable to write response, ex: {ex.Message}");
+                Logger.Print(_sessionContext.ThreadId, MessageType.Error, "Unable to write response, ex: {ex.Message}");
                 _sessionContext.IsSessionAlive = false;
                 _sessionContext.NetworkStream?.Dispose();
             }
@@ -55,12 +55,12 @@ namespace ImapProtocol
                 {
                     if (!_tcpController.ReadNext(_sessionContext, this))
                     {
-                        Logger.Print($"[{_sessionContext.ThreadId}] Unable to read command");
+                        Logger.Print(_sessionContext.ThreadId, MessageType.Error, "Unable to read command");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.Print($"[{_sessionContext.ThreadId}] Unable to read command, ex: {ex.Message}");
+                    Logger.Print(_sessionContext.ThreadId, MessageType.Error, "Unable to read command, ex: {ex.Message}");
                     _sessionContext.IsSessionAlive = false;
                     _sessionContext.NetworkStream?.Dispose();
                 }
@@ -76,13 +76,13 @@ namespace ImapProtocol
             {
                 _commandBuilder.Append(commandParts[0]);
                 _commands.Enqueue(_commandBuilder.ToString());
-                Logger.Print($"[{_sessionContext.ThreadId}] >> " + _commandBuilder.ToString());
+                Logger.Print(_sessionContext.ThreadId, MessageType.In, _commandBuilder.ToString());
                 _commandBuilder.Clear();
 
                 for (int i = 1; i < commandParts.Length - 1; i++)
                 {
                     _commands.Enqueue(commandParts[i]);
-                    Logger.Print($"[{_sessionContext.ThreadId}] >> " + commandParts[i]);
+                    Logger.Print(_sessionContext.ThreadId, MessageType.In, commandParts[i]);
                 }
             }
             _commandBuilder.Append(commandParts[^1]);
@@ -91,7 +91,7 @@ namespace ImapProtocol
         public void OnTcpConnect()
         {
             _connectedStateController.Run(new ImapContext(this), new ImapCommand());
-            Logger.Print($"[{_sessionContext.ThreadId}] Connection closed");
+            Logger.Print(_sessionContext.ThreadId, MessageType.None, "Connection closed");
         }
     }
 }

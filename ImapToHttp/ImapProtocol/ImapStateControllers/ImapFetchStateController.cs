@@ -69,7 +69,7 @@ namespace ImapProtocol.ImapStateControllers
 
         private IEnumerable<long> ExtractRealMessageIds((MessageSequenceType, long[]) range)
         {
-            var existMessageIds = new long[] {1, 2, 3, 4}.ToDictionary(i => i, i => i); // TODO
+            var existMessageIds = Messages; // TODO
             
             switch (range.Item1)
             {
@@ -78,9 +78,17 @@ namespace ImapProtocol.ImapStateControllers
                 case MessageSequenceType.Exact:
                     return range.Item2.Where(i => existMessageIds.ContainsKey(i));
                 case MessageSequenceType.Range:
-                    return existMessageIds.Keys.Where(k => k >= range.Item2[0] && k <= range.Item2[1]);
+                    if (Context.States.Any(s => s.State == ImapState.Uid))
+                    {
+                        return existMessageIds.Keys.Where(k => k >= range.Item2[0] && k <= range.Item2[1]);
+                    }
+                    return existMessageIds.Keys
+                        .OrderByDescending(k => k)
+                        .Skip((int) range.Item2[0] - 1)
+                        .Take((int) range.Item2[1] - (int) range.Item2[0] + 1)
+                        .ToList();
                 default:
-                    throw new ArgumentException(nameof(range));
+                        throw new ArgumentException(nameof(range));
             }
         }
 
@@ -303,8 +311,8 @@ namespace ImapProtocol.ImapStateControllers
             21*/
             //ParseDataItems(cmd.Args);
 
-            var message = Messages[messageId - 1];
-            var messageDate = MessageDts[messageId - 1];
+            var message = Messages[messageId];
+            var messageDate = MessageDts.First();
             var messageData = Rfc2822Parser.Parse(message);
 
             var messageBuilder = new StringBuilder($"* {messageId} FETCH (");
@@ -336,11 +344,11 @@ namespace ImapProtocol.ImapStateControllers
                 //"UTF-8") NIL NIL "7BIT" 2279 48)
                 var octetCount = messageData.BodyString.Length;
                 var linesCount = messageData.BodyString.Split('\n').Length;
-                messageBuilder.Append($"BODYSTRUCTURE (\"TEXT\" \"PLAIN\" (\"CHARSET\" \"UTF8\") NIL NIL \"7BIT\" {octetCount} {linesCount}) ");
+                messageBuilder.Append($"BODYSTRUCTURE (\"TEXT\" \"HTML\" (\"CHARSET\" \"UTF-8\") NIL NIL \"QUOTED-PRINTABLE\" {octetCount} {linesCount}) ");
                 //var mm =
                 //    "TEXT (<div>Test mail</div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>) MESSAGE/RFC822";
 
-            }*/
+            }
             
             if (fetchData.IncludeText)
             {
@@ -429,7 +437,7 @@ namespace ImapProtocol.ImapStateControllers
 
 
         private DateTime[] MessageDts = new DateTime[] {DateTime.Now, DateTime.Today, DateTime.Now, DateTime.Now};
-        private string[] Messages = new[] {
+        private Dictionary<long, string> Messages = new Dictionary<long, string>() { {29,
             @"Received: from mxfront3q.mail.yandex.net (localhost [127.0.0.1])
 	by mxfront3q.mail.yandex.net with LMTP id XHgJiklRSE-oiZJ5R89
 	for <nektar97@yandex.ru>; Tue, 12 May 2020 00:51:02 +0300
@@ -478,117 +486,15 @@ Date: Mon, 11 May 2020 21:50:59 +0000 (GMT)
 X-Account-Notification-Type: 31-RECOVERY-anexp#hsc-control_b
 Feedback-ID: 31-RECOVERY-anexp#hsc-control_b:account-notifier
 X-Notifications: 945326ed94400000
-Message-ID: <-qPL00HjYphEnrISrf5v4g.0@notifications.google.com>
+Message-ID: <-qPLx0x0xxxjdxxssdslrISrf5xxvx4g.0@nxot1ifications.google.com>
 Subject: =?UTF-8?B?0J7Qv9C+0LLQtdGJ0LXQvdC40LUg0L4g0LHQtdC30L7Qv9Cw0YHQvdC+0YHRgtC4INGB?=
 	=?UTF-8?B?0LLRj9C30LDQvdC90L7Qs9C+INCw0LrQutCw0YPQvdGC0LAgR29vZ2xl?=
 From: Google <no-reply@accounts.google.com>
 To: nektar97@yandex.ru
-Content-Type: multipart/alternative; boundary=""000000000000b1715b05a5665777""
-X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
+Content-Transfer-Encoding: 8bit
+Content-Type: text/html; charset=utf-8
 
-Content-Type: text/html; charset=""UTF-8""
-Content-Transfer-Encoding: quoted-printable
-
-<!DOCTYPE html><html lang=3D""en""><head><meta name=3D""format-detection"" cont=
-ent=3D""email=3Dno""/><meta name=3D""format-detection"" content=3D""date=3Dno""/>=
-<style nonce=3D""XUU54E2GbusQNZpRig13tA"">.awl a {color: #FFFFFF; text-decora=
-tion: none;} .abml a {color: #000000; font-family: Roboto-Medium,Helvetica,=
-Arial,sans-serif; font-weight: bold; text-decoration: none;} .adgl a {color=
-: rgba(0, 0, 0, 0.87); text-decoration: none;} .afal a {color: #b0b0b0; tex=
-t-decoration: none;} @media screen and (min-width: 600px) {.v2sp {padding: =
-6px 30px 0px;} .v2rsp {padding: 0px 10px;}} @media screen and (min-width: 6=
-00px) {.mdv2rw {padding: 40px 40px;}} </style><link href=3D""//fonts.googlea=
-pis.com/css?family=3DGoogle+Sans"" rel=3D""stylesheet"" type=3D""text/css""/></h=
-ead><body style=3D""margin: 0; padding: 0;"" bgcolor=3D""#FFFFFF""><table width=
-=3D""100%"" height=3D""100%"" style=3D""min-width: 348px;"" border=3D""0"" cellspac=
-ing=3D""0"" cellpadding=3D""0"" lang=3D""en""><tr height=3D""32"" style=3D""height: =
-32px;""><td></td></tr><tr align=3D""center""><td><div itemscope itemtype=3D""//=
-schema.org/EmailMessage""><div itemprop=3D""action"" itemscope itemtype=3D""//s=
-chema.org/ViewAction""><link itemprop=3D""url"" href=3D""https://accounts.googl=
-e.com/AccountChooser?Email=3Dnikita.tarasov1997@gmail.com&amp;continue=3Dht=
-tps://myaccount.google.com/alert/nt/1589233859000?rfn%3D31%26rfnc%3D1%26eid=
-%3D-1949072752098066202%26et%3D1%26anexp%3Dhsc-control_b""/><meta itemprop=
-=3D""name"" content=3D""=D0=9F=D1=80=D0=BE=D1=81=D0=BC=D0=BE=D1=82=D1=80=D0=B5=
-=D1=82=D1=8C =D0=B4=D0=B5=D0=B9=D1=81=D1=82=D0=B2=D0=B8=D1=8F""/></div></div=
-><table border=3D""0"" cellspacing=3D""0"" cellpadding=3D""0"" style=3D""padding-b=
-ottom: 20px; max-width: 516px; min-width: 220px;""><tr><td width=3D""8"" style=
-=3D""width: 8px;""></td><td><div style=3D""background-color: #F5F5F5; directio=
-n: ltr; padding: 16px;margin-bottom: 6px;""><table width=3D""100%"" border=3D""=
-0"" cellspacing=3D""0"" cellpadding=3D""0""><tbody><tr><td style=3D""vertical-ali=
-gn: top;""><img height=3D""20"" src=3D""https://www.gstatic.com/accountalerts/e=
-mail/Icon_recovery_x2_20_20.png""></td><td width=3D""13"" style=3D""width: 13px=
-;""></td><td style=3D""direction: ltr;""><span style=3D""font-family: Roboto-Re=
-gular,Helvetica,Arial,sans-serif; font-size: 13px; color: rgba(0,0,0,0.87);=
- line-height: 1.6; color: rgba(0,0,0,0.54);"">=D0=90=D0=B4=D1=80=D0=B5=D1=81=
- <a style=3D""text-decoration: none; color: rgba(0,0,0,0.87);"">nektar97@yand=
-ex.ru</a> =D1=83=D0=BA=D0=B0=D0=B7=D0=B0=D0=BD =D0=B2 =D0=BA=D0=B0=D1=87=D0=
-=B5=D1=81=D1=82=D0=B2=D0=B5 =D1=80=D0=B5=D0=B7=D0=B5=D1=80=D0=B2=D0=BD=D0=
-=BE=D0=B3=D0=BE =D0=B4=D0=BB=D1=8F =D0=B2=D0=BE=D1=81=D1=81=D1=82=D0=B0=D0=
-=BD=D0=BE=D0=B2=D0=BB=D0=B5=D0=BD=D0=B8=D1=8F =D0=B4=D0=BE=D1=81=D1=82=D1=
-=83=D0=BF=D0=B0 =D0=BA =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82=D1=83 <a =
-style=3D""text-decoration: none; color: rgba(0,0,0,0.87);"">nikita.tarasov199=
-7@gmail.com</a>.</span> <span><span style=3D""font-family: Roboto-Regular,He=
-lvetica,Arial,sans-serif; font-size: 13px; color: rgba(0,0,0,0.87); line-he=
-ight: 1.6; color: rgba(0,0,0,0.54);"">=D0=AD=D1=82=D0=BE =D0=BD=D0=B5 =D0=92=
-=D0=B0=D1=88 =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82? =D0=9D=D0=B0=D0=B6=
-=D0=BC=D0=B8=D1=82=D0=B5 <a href=3D""https://accounts.google.com/AccountDisa=
-vow?adt=3DAOX8kip424YnwreejXc5XLfo4IyprZe0sqGhcXmwR2FBU21o5K_B8oPJdpAbJLc&a=
-mp;rfn=3D31&amp;anexp=3Dhsc-control_b"" data-meta-key=3D""disavow"" style=3D""t=
-ext-decoration: none; color: #4285F4;"" target=3D""_blank"">=D0=B7=D0=B4=D0=B5=
-=D1=81=D1=8C</a>.</span></span></td></tr></tbody></table></div><div style=
-=3D""border-style: solid; border-width: thin; border-color:#dadce0; border-r=
-adius: 8px; padding: 40px 20px;"" align=3D""center"" class=3D""mdv2rw""><img src=
-=3D""https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_color_=
-74x24dp.png"" width=3D""74"" height=3D""24"" aria-hidden=3D""true"" style=3D""margi=
-n-bottom: 16px;"" alt=3D""Google""><div style=3D""font-family: &#39;Google Sans=
-&#39;,Roboto,RobotoDraft,Helvetica,Arial,sans-serif;border-bottom: thin sol=
-id #dadce0; color: rgba(0,0,0,0.87); line-height: 32px; padding-bottom: 24p=
-x;text-align: center; word-break: break-word;""><div style=3D""font-size: 24p=
-x;"">=D0=92=D1=8B=D0=BF=D0=BE=D0=BB=D0=BD=D0=B5=D0=BD =D0=B2=D1=85=D0=BE=D0=
-=B4 =D0=B2 =D0=92=D0=B0=D1=88 =D1=81=D0=B2=D1=8F=D0=B7=D0=B0=D0=BD=D0=BD=D1=
-=8B=D0=B9 =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82</div><table align=3D""c=
-enter"" style=3D""margin-top:8px;""><tr style=3D""line-height: normal;""><td ali=
-gn=3D""right"" style=3D""padding-right:8px;""><img width=3D""20"" height=3D""20"" s=
-tyle=3D""width: 20px; height: 20px; vertical-align: sub; border-radius: 50%;=
-;"" src=3D""https://lh3.googleusercontent.com/a-/AOh14GjCucR-rYFWBkt5LpWP2nLC=
--9CrrQ4WXB3iqGtP7w=3Ds96"" alt=3D""""></td><td><a style=3D""font-family: &#39;G=
-oogle Sans&#39;,Roboto,RobotoDraft,Helvetica,Arial,sans-serif;color: rgba(0=
-,0,0,0.87); font-size: 14px; line-height: 20px;"">nikita.tarasov1997@gmail.c=
-om</a></td></tr></table></div><div style=3D""font-family: Roboto-Regular,Hel=
-vetica,Arial,sans-serif; font-size: 14px; color: rgba(0,0,0,0.87); line-hei=
-ght: 20px;padding-top: 20px; text-align: center;"">=D0=92 =D0=92=D0=B0=D1=88=
- =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82 Google =D1=82=D0=BE=D0=BB=D1=8C=
-=D0=BA=D0=BE =D1=87=D1=82=D0=BE =D0=B2=D1=8B=D0=BF=D0=BE=D0=BB=D0=BD=D0=B5=
-=D0=BD =D0=B2=D1=85=D0=BE=D0=B4 =D0=BD=D0=B0 =D0=BD=D0=BE=D0=B2=D0=BE=D0=BC=
- =D1=83=D1=81=D1=82=D1=80=D0=BE=D0=B9=D1=81=D1=82=D0=B2=D0=B5 Apple iPhone.=
- =D0=9C=D1=8B =D1=85=D0=BE=D1=82=D0=B8=D0=BC =D1=83=D0=B1=D0=B5=D0=B4=D0=B8=
-=D1=82=D1=8C=D1=81=D1=8F, =D1=87=D1=82=D0=BE =D1=8D=D1=82=D0=BE =D0=B1=D1=
-=8B=D0=BB=D0=B8 =D0=92=D1=8B.<div style=3D""padding-top: 32px; text-align: c=
-enter;""><a href=3D""https://accounts.google.com/AccountChooser?Email=3Dnikit=
-a.tarasov1997@gmail.com&amp;continue=3Dhttps://myaccount.google.com/alert/n=
-t/1589233859000?rfn%3D31%26rfnc%3D1%26eid%3D-1949072752098066202%26et%3D1%2=
-6anexp%3Dhsc-control_b"" target=3D""_blank"" link-id=3D""main-button-link"" styl=
-e=3D""font-family: &#39;Google Sans&#39;,Roboto,RobotoDraft,Helvetica,Arial,=
-sans-serif; line-height: 16px; color: #ffffff; font-weight: 400; text-decor=
-ation: none;font-size: 14px;display:inline-block;padding: 10px 24px;backgro=
-und-color: #4184F3; border-radius: 5px; min-width: 90px;"">=D0=9F=D0=BE=D1=
-=81=D0=BC=D0=BE=D1=82=D1=80=D0=B5=D1=82=D1=8C =D0=B4=D0=B5=D0=B9=D1=81=D1=
-=82=D0=B2=D0=B8=D1=8F</a></div></div></div><div style=3D""text-align: left;""=
-><div style=3D""font-family: Roboto-Regular,Helvetica,Arial,sans-serif;color=
-: rgba(0,0,0,0.54); font-size: 11px; line-height: 18px; padding-top: 12px; =
-text-align: center;""><div>=D0=AD=D1=82=D0=BE =D1=81=D0=BE=D0=BE=D0=B1=D1=89=
-=D0=B5=D0=BD=D0=B8=D0=B5 =D0=BE =D0=B2=D0=B0=D0=B6=D0=BD=D1=8B=D1=85 =D0=B8=
-=D0=B7=D0=BC=D0=B5=D0=BD=D0=B5=D0=BD=D0=B8=D1=8F=D1=85 =D0=B2 =D0=92=D0=B0=
-=D1=88=D0=B5=D0=BC =D0=B0=D0=BA=D0=BA=D0=B0=D1=83=D0=BD=D1=82=D0=B5 =D0=B8 =
-=D1=81=D0=B5=D1=80=D0=B2=D0=B8=D1=81=D0=B0=D1=85 Google.</div><div style=3D=
-""direction: ltr;"">&copy; 2020 Google LLC, <a class=3D""afal"" style=3D""font-f=
-amily: Roboto-Regular,Helvetica,Arial,sans-serif;color: rgba(0,0,0,0.54); f=
-ont-size: 11px; line-height: 18px; padding-top: 12px; text-align: center;"">=
-1600 Amphitheatre Parkway, Mountain View, CA 94043, USA</a></div></div></di=
-v></td><td width=3D""8"" style=3D""width: 8px;""></td></tr></table></td></tr><t=
-r height=3D""32"" style=3D""height: 32px;""><td></td></tr></table></body></html=
->
---000000000000b1715b05a5665777--",
+<!DOCTYPE html><html lang=""en""><head><meta name=""format-detection"" content=""email=no""/><meta name=""format-detection"" content=""date=no""/><style nonce=""XUU54E2GbusQNZpRig13tA"">.awl a {color: #FFFFFF; text-decoration: none;} .abml a {color: #000000; font-family: Roboto-Medium,Helvetica,Arial,sans-serif; font-weight: bold; text-decoration: none;} .adgl a {color: rgba(0, 0, 0, 0.87); text-decoration: none;} .afal a {color: #b0b0b0; text-decoration: none;} @media screen and (min-width: 600px) {.v2sp {padding: 6px 30px 0px;} .v2rsp {padding: 0px 10px;}} @media screen and (min-width: 600px) {.mdv2rw {padding: 40px 40px;}} </style><link href=""//fonts.googleapis.com/css?family=Google+Sans"" rel=""stylesheet"" type=""text/css""/></head><body style=""margin: 0; padding: 0;"" bgcolor=""#FFFFFF""><table width=""100%"" height=""100%"" style=""min-width: 348px;"" border=""0"" cellspacing=""0"" cellpadding=""0"" lang=""en""><tr height=""32"" style=""height: 32px;""><td></td></tr><tr align=""center""><td><div itemscope itemtype=""//schema.org/EmailMessage""><div itemprop=""action"" itemscope itemtype=""//schema.org/ViewAction""><link itemprop=""url"" href=""https://accounts.google.com/AccountChooser?Email=nikita.tarasov1997@gmail.com&amp;continue=https://myaccount.google.com/alert/nt/1589233859000?rfn%3D31%26rfnc%3D1%26eid%3D-1949072752098066202%26et%3D1%26anexp%3Dhsc-control_b""/><meta itemprop=""name"" content=""Просмотреть действия""/></div></div><table border=""0"" cellspacing=""0"" cellpadding=""0"" style=""padding-bottom: 20px; max-width: 516px; min-width: 220px;""><tr><td width=""8"" style=""width: 8px;""></td><td><div style=""background-color: #F5F5F5; direction: ltr; padding: 16px;margin-bottom: 6px;""><table width=""100%"" border=""0"" cellspacing=""0"" cellpadding=""0""><tbody><tr><td style=""vertical-align: top;""><img height=""20"" src=""https://www.gstatic.com/accountalerts/email/Icon_recovery_x2_20_20.png""></td><td width=""13"" style=""width: 13px;""></td><td style=""direction: ltr;""><span style=""font-family: Roboto-Regular,Helvetica,Arial,sans-serif; font-size: 13px; color: rgba(0,0,0,0.87); line-height: 1.6; color: rgba(0,0,0,0.54);"">Адрес <a style=""text-decoration: none; color: rgba(0,0,0,0.87);"">nektar97@yandex.ru</a> &#x443;&#x43A;&#x430;&#x437;&#x430;&#x43D; &#x432; &#x43A;&#x430;&#x447;&#x435;&#x441;&#x442;&#x432;&#x435; &#x440;&#x435;&#x437;&#x435;&#x440;&#x432;&#x43D;&#x43E;&#x433;&#x43E; &#x434;&#x43B;&#x44F; &#x432;&#x43E;&#x441;&#x441;&#x442;&#x430;&#x43D;&#x43E;&#x432;&#x43B;&#x435;&#x43D;&#x438;&#x44F; &#x434;&#x43E;&#x441;&#x442;&#x443;&#x43F;&#x430; &#x43A; &#x430;&#x43A;&#x43A;&#x430;&#x443;&#x43D;&#x442;&#x443; <a style=""text-decoration: none; color: rgba(0,0,0,0.87);"">nikita.tarasov1997@gmail.com</a>.</span> <span><span style=""font-family: Roboto-Regular,Helvetica,Arial,sans-serif; font-size: 13px; color: rgba(0,0,0,0.87); line-height: 1.6; color: rgba(0,0,0,0.54);"">Это не Ваш аккаунт? Нажмите <a href=""https://accounts.google.com/AccountDisavow?adt=AOX8kip424YnwreejXc5XLfo4IyprZe0sqGhcXmwR2FBU21o5K_B8oPJdpAbJLc&amp;rfn=31&amp;anexp=hsc-control_b"" data-meta-key=""disavow"" style=""text-decoration: none; color: #4285F4;"" target=""_blank"">здесь</a>.</span></span></td></tr></tbody></table></div><div style=""border-style: solid; border-width: thin; border-color:#dadce0; border-radius: 8px; padding: 40px 20px;"" align=""center"" class=""mdv2rw""><img src=""https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_color_74x24dp.png"" width=""74"" height=""24"" aria-hidden=""true"" style=""margin-bottom: 16px;"" alt=""Google""><div style=""font-family: &#39;Google Sans&#39;,Roboto,RobotoDraft,Helvetica,Arial,sans-serif;border-bottom: thin solid #dadce0; color: rgba(0,0,0,0.87); line-height: 32px; padding-bottom: 24px;text-align: center; word-break: break-word;""><div style=""font-size: 24px;"">&#x412;&#x44B;&#x43F;&#x43E;&#x43B;&#x43D;&#x435;&#x43D; &#x432;&#x445;&#x43E;&#x434; &#x432; &#x412;&#x430;&#x448; &#x441;&#x432;&#x44F;&#x437;&#x430;&#x43D;&#x43D;&#x44B;&#x439; &#x430;&#x43A;&#x43A;&#x430;&#x443;&#x43D;&#x442;</div><table align=""center"" style=""margin-top:8px;""><tr style=""line-height: normal;""><td align=""right"" style=""padding-right:8px;""><img width=""20"" height=""20"" style=""width: 20px; height: 20px; vertical-align: sub; border-radius: 50%;;"" src=""https://lh3.googleusercontent.com/a-/AOh14GjCucR-rYFWBkt5LpWP2nLC-9CrrQ4WXB3iqGtP7w=s96"" alt=""""></td><td><a style=""font-family: &#39;Google Sans&#39;,Roboto,RobotoDraft,Helvetica,Arial,sans-serif;color: rgba(0,0,0,0.87); font-size: 14px; line-height: 20px;"">nikita.tarasov1997@gmail.com</a></td></tr></table></div><div style=""font-family: Roboto-Regular,Helvetica,Arial,sans-serif; font-size: 14px; color: rgba(0,0,0,0.87); line-height: 20px;padding-top: 20px; text-align: center;"">В Ваш аккаунт Google только что выполнен вход на новом устройстве Apple iPhone. Мы хотим убедиться, что это были Вы.<div style=""padding-top: 32px; text-align: center;""><a href=""https://accounts.google.com/AccountChooser?Email=nikita.tarasov1997@gmail.com&amp;continue=https://myaccount.google.com/alert/nt/1589233859000?rfn%3D31%26rfnc%3D1%26eid%3D-1949072752098066202%26et%3D1%26anexp%3Dhsc-control_b"" target=""_blank"" link-id=""main-button-link"" style=""font-family: &#39;Google Sans&#39;,Roboto,RobotoDraft,Helvetica,Arial,sans-serif; line-height: 16px; color: #ffffff; font-weight: 400; text-decoration: none;font-size: 14px;display:inline-block;padding: 10px 24px;background-color: #4184F3; border-radius: 5px; min-width: 90px;"">Посмотреть действия</a></div></div></div><div style=""text-align: left;""><div style=""font-family: Roboto-Regular,Helvetica,Arial,sans-serif;color: rgba(0,0,0,0.54); font-size: 11px; line-height: 18px; padding-top: 12px; text-align: center;""><div>Это сообщение о важных изменениях в Вашем аккаунте и сервисах Google.</div><div style=""direction: ltr;"">&copy; 2020 Google LLC, <a class=""afal"" style=""font-family: Roboto-Regular,Helvetica,Arial,sans-serif;color: rgba(0,0,0,0.54); font-size: 11px; line-height: 18px; padding-top: 12px; text-align: center;"">1600 Amphitheatre Parkway, Mountain View, CA 94043, USA</a></div></div></div></td><td width=""8"" style=""width: 8px;""></td></tr></table></td></tr><tr height=""32"" style=""height: 32px;""><td></td></tr></table></body></html>" },{16, 
             @"Received: from mxback23g.mail.yandex.net (localhost [127.0.0.1])
 	by mxback23g.mail.yandex.net with LMTP id Flrtgaf4AP-i3WimzCS
 	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:07:37 +0300
@@ -629,109 +535,13 @@ Subject: The test letter!
 MIME-Version: 1.0
 X-Mailer: Yamail [ http://yandex.ru ] 5.0
 Date: Sun, 26 Apr 2020 20:07:35 +0300
-Message-Id: <125551587920843@mail.yandex.ru>
+Message-Id: <1255x51xxxx587920843@mail.yandex.ru>
 Content-Transfer-Encoding: 8bit
 Content-Type: text/html; charset=utf-8
 X-Yandex-Forward: 9d668b532af1baa9ecc9f739379b8bef
 Return-Path: mail@ntarasov.ru
 X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
 
-<div> </div><div> </div><div>-- </div><div>124456</div><div> </div>",
-            @"Received: from mxback29j.mail.yandex.net (localhost [127.0.0.1])
-	by mxback29j.mail.yandex.net with LMTP id lQMUGk8aTm-ke9BygF1
-	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:08:50 +0300
-Received: from forward103o.mail.yandex.net (forward103o.mail.yandex.net [37.140.190.177])
-	by mxback29j.mail.yandex.net (mxback/Yandex) with ESMTP id E7bXlDtnC3-8okKDCG6;
-	Sun, 26 Apr 2020 20:08:50 +0300
-X-Yandex-Front: mxback29j.mail.yandex.net
-X-Yandex-TimeMark: 1587920930.415
-X-Yandex-Suid-Status: 1 193281561
-X-Yandex-Spam: 1
-Received: from mxback9o.mail.yandex.net (mxback9o.mail.yandex.net [IPv6:2a02:6b8:0:1a2d::23])
-	by forward103o.mail.yandex.net (Yandex) with ESMTP id 5C88E5F8088D
-	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:08:50 +0300 (MSK)
-Received: from mxback9o.mail.yandex.net (localhost [127.0.0.1])
-	by mxback9o.mail.yandex.net with LMTP id t61lZhiBsI-e2Cg4Lm1;
-	Sun, 26 Apr 2020 20:08:50 +0300
-Received: from mxback9o.mail.yandex.net (localhost.localdomain [127.0.0.1])
-	by mxback9o.mail.yandex.net (Yandex) with ESMTP id 26F76144CCED;
-	Sun, 26 Apr 2020 20:08:50 +0300 (MSK)
-Received: from localhost (localhost [::1])
-	by mxback9o.mail.yandex.net (mxback/Yandex) with ESMTP id VPyNJaDaak-8nbOqqsa;
-	Sun, 26 Apr 2020 20:08:49 +0300
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yandex.ru; s=mail; t=1587920929;
-	bh=0ssghA7nBK+MzvCyBqnnyxm6w7KXH0nd85KoqvbrUOI=;
-	h=Message-Id:Date:Subject:To:From;
-	b=Dqk0M1SIdWep/JodHhgNCXRSBcS4HYUl+I7JHx/xH2aeh8/8InSyM7JN7TfnJhWP6
-	 2XJ7GCxHdN6GW8H4TTGc8obWgGlFkxPl8elIQkV8bEq+9wX2wkCHWy0uTCqmLBxjD+
-	 tGpJ0Ppo5P5SkwZQI6kDRIXBom1GJH6+iy5o5vfo=
-Authentication-Results: mxback9o.mail.yandex.net; dkim=pass header.i=@yandex.ru
-X-Yandex-Suid-Status: 1 1130000035882273,1 0
-X-Yandex-Sender-Uid: 70876967
-Received: by myt5-b646bde4b8f3.qloud-c.yandex.net with HTTP;
-	Sun, 26 Apr 2020 20:08:49 +0300
-From: Nikita Tarasov <mail@ntarasov.ru>
-Envelope-From: nektar97@yandex.ru
-To: mail <mail@ntarasov.ru>
-Subject: Another letter
-MIME-Version: 1.0
-X-Mailer: Yamail [ http://yandex.ru ] 5.0
-Date: Sun, 26 Apr 2020 20:08:49 +0300
-Message-Id: <613041587920919@mail.yandex.ru>
-Content-Transfer-Encoding: 8bit
-Content-Type: text/html; charset=utf-8
-X-Yandex-Forward: 9d668b532af1baa9ecc9f739379b8bef
-Return-Path: mail@ntarasov.ru
-X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
-
-<div> </div><div> </div><div>-- </div><div>12345</div><div> </div>",
-            @"Received: from mxback22g.mail.yandex.net (localhost [127.0.0.1])
-	by mxback22g.mail.yandex.net with LMTP id NiTul4T3ij-Eujq6W50
-	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:10:21 +0300
-Received: from forward100p.mail.yandex.net (forward100p.mail.yandex.net [2a02:6b8:0:1472:2741:0:8b7:100])
-	by mxback22g.mail.yandex.net (mxback/Yandex) with ESMTP id A4n3NxsjnP-AL9CFTbG;
-	Sun, 26 Apr 2020 20:10:21 +0300
-X-Yandex-Front: mxback22g.mail.yandex.net
-X-Yandex-TimeMark: 1587921021.354
-X-Yandex-Suid-Status: 1 193281561
-X-Yandex-Spam: 1
-Received: from mxback30g.mail.yandex.net (mxback30g.mail.yandex.net [IPv6:2a02:6b8:0:1472:2741:0:8b7:330])
-	by forward100p.mail.yandex.net (Yandex) with ESMTP id 53E305980750
-	for <nektar97+nt@yandex.ru>; Sun, 26 Apr 2020 20:10:21 +0300 (MSK)
-Received: from mxback30g.mail.yandex.net (localhost [127.0.0.1])
-	by mxback30g.mail.yandex.net with LMTP id swHnzfktoI-hvmJ5a9d;
-	Sun, 26 Apr 2020 20:10:21 +0300
-Received: from mxback30g.mail.yandex.net (localhost [127.0.0.1])
-	by mxback30g.mail.yandex.net (Yandex) with ESMTP id 2BFBB21A3A;
-	Sun, 26 Apr 2020 20:10:21 +0300 (MSK)
-Received: from localhost (localhost [::1])
-	by mxback30g.mail.yandex.net (mxback/Yandex) with ESMTP id dScKzewRpc-AKrmlJhk;
-	Sun, 26 Apr 2020 20:10:20 +0300
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yandex.ru; s=mail; t=1587921020;
-	bh=0ssghA7nBK+MzvCyBqnnyxm6w7KXH0nd85KoqvbrUOI=;
-	h=Message-Id:Date:Subject:To:From;
-	b=nZyqAMxd/21BTl+ZKKC+lf8/9VY0hL/enP6ntn8ad3RjWzv7BXwXI33RFu/PnZ7RA
-	 +cnJIsLzKBLhcEgWEpwXYfKL1mm8H2b6/xznyVa0a09f4PDuLASZ1t4/gp2/OYhdn7
-	 ex9Zq0b9qL7lqXj2JLLclJhb02KptGo6sBldD21E=
-Authentication-Results: mxback30g.mail.yandex.net; dkim=pass header.i=@yandex.ru
-X-Yandex-Suid-Status: 1 1130000035882273,1 0
-X-Yandex-Sender-Uid: 70876967
-Received: by iva7-8a22bc446c12.qloud-c.yandex.net with HTTP;
-	Sun, 26 Apr 2020 20:10:20 +0300
-From: Nikita Tarasov <mail@ntarasov.ru>
-Envelope-From: nektar97@yandex.ru
-To: mail <mail@ntarasov.ru>
-Subject: hello 12345
-MIME-Version: 1.0
-X-Mailer: Yamail [ http://yandex.ru ] 5.0
-Date: Sun, 26 Apr 2020 20:10:20 +0300
-Message-Id: <695211587921002@mail.yandex.ru>
-Content-Transfer-Encoding: 8bit
-Content-Type: text/html; charset=utf-8
-X-Yandex-Forward: 9d668b532af1baa9ecc9f739379b8bef
-Return-Path: mail@ntarasov.ru
-X-Yandex-Forward: 85d02b20992161de89aefe959a6f9d4d
-
-<div> </div><div> </div><div>-- </div><div>12415161</div><div> </div>"};
+<div> </div><div> </div><div>-- </div><div>1<b>2</b>4456<img src=""https://sun9-40.userapi.com/c857636/v857636350/1f2d7c/QtotoIZnME8.jpg""/></div><div> </div>" }};
     }
 }
