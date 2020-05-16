@@ -20,6 +20,7 @@ namespace ImapProtocol.Contracts
         Expunge = 15,
         Copy = 16,
         Fetch = 17,
-        Uid = 18
+        Uid = 18,
+        Store = 19
     }
 }

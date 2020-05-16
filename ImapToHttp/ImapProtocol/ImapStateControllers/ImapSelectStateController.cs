@@ -64,6 +64,9 @@ namespace ImapProtocol.ImapStateControllers
                     case "UID":
                         new ImapUidStateController().Run(Context, imapCommand);
                         break;
+                    case "STORE":
+                        new ImapStoreStateController().Run(Context, imapCommand);
+                        break;
                 }
             }
             return true;

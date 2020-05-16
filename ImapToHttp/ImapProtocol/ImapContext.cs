@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using ImapProtocol.Contracts;
 
 namespace ImapProtocol
@@ -8,7 +9,7 @@ namespace ImapProtocol
         private readonly Stack<ImapStateItem> _stateItems = new Stack<ImapStateItem>();
 
         public IEnumerable<ImapStateItem> States => _stateItems;
-        public ImapStateItem PeekState => _stateItems.Peek();
+        public ImapStateItem PrePeekState => _stateItems.Skip(1).First();
         public bool HasState => _stateItems.Count != 0;
         
         public ITcpCommandProvider CommandProvider { get; }

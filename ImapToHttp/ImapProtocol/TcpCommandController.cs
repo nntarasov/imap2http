@@ -70,7 +70,7 @@ namespace ImapProtocol
 
         public void OnTcpReceive(byte[] bytes, int offset, int count)
         {
-            var bufferString = Encoding.UTF7.GetString(bytes, offset, count);
+            var bufferString = Encoding.ASCII.GetString(bytes, offset, count);
             var commandParts = bufferString.Split(CommandSeparator);
             if (commandParts.Length > 1)
             {

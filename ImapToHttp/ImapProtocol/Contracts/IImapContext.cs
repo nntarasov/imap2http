@@ -5,7 +5,7 @@ namespace ImapProtocol.Contracts
     public interface IImapContext
     {
         IEnumerable<ImapStateItem> States { get; }
-        ImapStateItem PeekState { get; }
+        ImapStateItem PrePeekState { get; }
         bool TryPopState(out ImapStateItem currentState);
         void AddState(ImapStateItem state);
         ITcpCommandProvider CommandProvider { get; }

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -42,7 +43,9 @@ namespace ImapProtocol
                 Thread.Yield();
             }
             var count = tcpContext.NetworkStream.Read(recvBuffer, 0, recvBuffer.Length);
-            
+
+            string rr = recvBuffer.Take(count).Select(c => c.ToString()).Aggregate((a, b) => a + " " + b);
+            LoggerFactory.GetLogger().Print(rr);
             
             sender.OnTcpReceive( recvBuffer, 0, count);
             return true;
