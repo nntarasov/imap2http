@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -197,7 +196,7 @@ namespace ImapProtocol.ImapStateControllers
             var dataItemsString = string.Join(' ', args.Skip(1));
 
             var idType = Context.States.Any(s => s.State == ImapState.Uid) ? MessageIdType.Uid : MessageIdType.Id;
-            var messageIds = ImapCommon.ExtractRealMessageIds(range, idType).ToList();
+            var messageIds = ImapCommon.ExtractRealMessageIds(Context, range, idType).ToList();
             if (!messageIds.Any())
             {
                 Context.CommandProvider.Write($"{cmd.Tag} NO\r\n");
@@ -222,7 +221,7 @@ namespace ImapProtocol.ImapStateControllers
             return true;
         }
 
-        private bool FetchMessage(long messageId, FetchData fetchData)
+        private bool FetchMessage(int messageId, FetchData fetchData)
         {
             /* 3 FETCH (BODY[HEADER,FIELDS ("DATE" "FROM" "SUBJECT")] {112}
             18 Date: Tue, 14 Sep 1999 10:09:50 -0500
@@ -231,10 +230,9 @@ namespace ImapProtocol.ImapStateControllers
             21*/
             //ParseDataItems(cmd.Args);
 
-            var message = ImapCommon.Messages[messageId];
-            var messageDate = ImapCommon.MessageDts.First();
-            var messageData = Rfc2822Parser.Parse(message);
-
+            Context.EntityProvider.MailProvider.GetMessage(messageId);
+            var message = Context.EntityProvider.MailProvider.GetMessage(messageId);
+            
             var messageBuilder = new StringBuilder($"* {messageId} FETCH (");
 
             if (fetchData.IncludeFlags)
@@ -244,12 +242,12 @@ namespace ImapProtocol.ImapStateControllers
 
             if (fetchData.IncludeInternaldate)
             {
-                messageBuilder.Append($"INTERNALDATE \"{messageDate.ToImapString()}\" ");
+                messageBuilder.Append($"INTERNALDATE \"{message.Date.ToImapString()}\" ");
             }
 
             if (fetchData.IncludeRfc822Size)
             {
-                messageBuilder.Append($"RFC822.SIZE {message.Length} ");
+                messageBuilder.Append($"RFC822.SIZE {message.Rfc2822.Length} ");
             }
             
                         
@@ -262,17 +260,14 @@ namespace ImapProtocol.ImapStateControllers
             {
                 //("TEXT" "PLAIN" ("CHARSET"
                 //"UTF-8") NIL NIL "7BIT" 2279 48)
-                var octetCount = messageData.BodyString.Length;
-                var linesCount = messageData.BodyString.Split('\n').Length;
+                var octetCount = message.Body.Length;
+                var linesCount = message.Body.Split('\n').Length;
                 messageBuilder.Append($"BODYSTRUCTURE (\"TEXT\" \"HTML\" (\"CHARSET\" \"UTF-8\") NIL NIL \"QUOTED-PRINTABLE\" {octetCount} {linesCount}) ");
-                //var mm =
-                //    "TEXT (<div>Test mail</div><div> </div><div>-- </div><div>С уважением,<br />Тарасов Никита</div><div> </div>) MESSAGE/RFC822";
-
             }
             
             if (fetchData.IncludeText)
             {
-                var octetCount = messageData.BodyString.Length;
+                var octetCount = message.Body.Length;
 
                 bool isPart = false;
                 bool toEnd = false;
@@ -297,16 +292,16 @@ namespace ImapProtocol.ImapStateControllers
                     }
                     else if (toEnd)
                     {
-                        contents = messageData.BodyString.Substring((int) fetchData.SizeFrom.Value);
+                        contents = message.Body.Substring((int) fetchData.SizeFrom.Value);
                     }
                     else
                     {
-                        contents = messageData.BodyString.Substring((int) fetchData.SizeFrom.Value, (int) fetchData.Size);
+                        contents = message.Body.Substring((int) fetchData.SizeFrom.Value, (int) fetchData.Size);
                     }
                 }
                 else
                 {
-                    contents = messageData.BodyString;
+                    contents = message.Body;
                 } 
                 
                 string partSize = isPart ? $"{fetchData.SizeFrom}.{szToResponse}"  : "0";
@@ -327,7 +322,7 @@ namespace ImapProtocol.ImapStateControllers
                     messageBuilder.Append($"BODY[HEADER] ");
                 }
                 var headerBuilder = new StringBuilder();
-                foreach (var header in  messageData.Headers)
+                foreach (var header in  message.Headers)
                 {
                     if (!fetchData.HeaderFieldsNot.Contains(header.Key) && 
                         (!fetchData.HeaderFields.Any() || fetchData.HeaderFields.Contains(header.Key)))
@@ -344,11 +339,13 @@ namespace ImapProtocol.ImapStateControllers
 
             if (fetchData.Rfc2822)
             {
-                var octetCount = messageData.MessageString.Length;
+                var octetCount = message.Rfc2822.Length;
                 messageBuilder.Append($"BODY[] {{{octetCount}}}\r\n");
-                messageBuilder.Append(messageData.MessageString.TrimEnd('\n').TrimEnd('\r'));
+                messageBuilder.Append(message.Rfc2822.TrimEnd('\n').TrimEnd('\r'));
                 messageBuilder.Append("\r\n");
             }
+            
+            // TODO: ENVELOPE, MIME
 
             messageBuilder.Append(")\r\n");
             Context.CommandProvider.Write(messageBuilder.ToString());

@@ -34,6 +34,18 @@ namespace ImapProtocol.ImapStateControllers
         response for further explanation.
              */
 
+            var expunged = Context.EntityProvider.Expunge();
+
+            if (expunged == null)
+            {
+                Context.CommandProvider.Write($"{cmd.Tag} NO EXPUNGE\r\n");
+                return true;
+            }
+
+            foreach (var id in expunged)
+            {
+                Context.CommandProvider.Write($"* {id} EXPUNGE\r\n");
+            }
             Context.CommandProvider.Write($"{cmd.Tag} OK EXPUNGE completed\r\n");
             return true;
         }

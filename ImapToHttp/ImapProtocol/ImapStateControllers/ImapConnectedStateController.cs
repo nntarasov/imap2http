@@ -17,7 +17,6 @@ namespace ImapProtocol.ImapStateControllers
 
             while (Context.CommandProvider.IsSessionAlive)
             {
-                LoggerFactory.GetLogger().Print("wait...");
                 string commandText = Context.CommandProvider.Read();
                 var imapCommand = new ImapCommand(commandText);
 

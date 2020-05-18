@@ -29,7 +29,7 @@ namespace ImapProtocol.ImapStateControllers
                     }
                     return storeResult;
                 default:
-                    Context.CommandProvider.Write($"{cmd.Tag} BAD");
+                    Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");
                     return true;
             }
             //Context.CommandProvider.Write($"{imapCommand.Tag} OK\r\n");

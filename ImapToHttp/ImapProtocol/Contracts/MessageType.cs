@@ -5,6 +5,7 @@ namespace ImapProtocol.Contracts
         None = 0,
         In,
         Out,
-        Error
+        Error,
+        Info
     }
 }

@@ -13,8 +13,13 @@ namespace ImapProtocol
         public bool HasState => _stateItems.Count != 0;
         
         public ITcpCommandProvider CommandProvider { get; }
+        public IEntityProvider EntityProvider { get; set; }
+        
+        public IList<string> SubscribedMailboxes { get; } = new List<string>();
 
-        public ImapContext(ITcpCommandProvider commandProvider)
+        public int ThreadId { get; set; }
+
+        public ImapContext(ITcpCommandProvider commandProvider, int threadId)
         {
             CommandProvider = commandProvider;
         }

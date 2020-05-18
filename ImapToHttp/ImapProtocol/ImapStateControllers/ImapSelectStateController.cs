@@ -9,33 +9,42 @@ namespace ImapProtocol.ImapStateControllers
         public override ImapState State { get; } = ImapState.Selected;
         protected override bool RunInternal(ImapCommand cmd)
         {
-            var mailboxes = new[]
-            {
-                "INBOX"
-            };
 
             var match = Regex.Match(cmd.Args, @"^(?<box>\w+)");
 
             if (!match.Success || string.IsNullOrWhiteSpace(match.Groups["box"].Value))
             {
-                Context.CommandProvider.Write($"{cmd.Tag} BAD");
+                Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");
                 return true;
             }
 
-            var mailboxArg = match.Groups["box"].Value;
+            var mailboxes = Context.EntityProvider.GetAllDirectories();
+            
+            var mailboxArg = match.Groups["box"].Value.Trim();
             if (!mailboxes.Contains(mailboxArg))
             {
                 Context.CommandProvider.Write($"{cmd.Tag} NO\r\n");
                 return true;
             }
             
-            Context.CommandProvider.Write("* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n");
-            Context.CommandProvider.Write("* 2 EXISTS\r\n");
-            Context.CommandProvider.Write("* 1 RECENT\r\n");
-            Context.CommandProvider.Write("* OK [UIDVALIDITY 1345] UIDVALIDITY\r\n");
-            Context.CommandProvider.Write("* OK [UIDNEXT 1345] UIDNEXT\r\n");
-            Context.CommandProvider.Write("* OK [UNSEEN 2] UNSEEN\r\n");
-            Context.CommandProvider.Write($"{cmd.Tag} OK SELECT\r\n");
+            var details = Context.EntityProvider.GetDirectoryDetails(mailboxArg);
+            if (details == null)
+            {
+                Context.CommandProvider.Write($"{cmd.Tag} NO\r\n");
+                return true;
+            }
+
+            var flagsString = (details.Flags?.Any() ?? false) ? 
+                details.Flags.Aggregate((a, b) => a + " " + b) : 
+                string.Empty;
+            
+            Context.CommandProvider.Write($"* FLAGS ({flagsString})\r\n");
+            Context.CommandProvider.Write($"* {details.ExistCount} EXISTS\r\n");
+            Context.CommandProvider.Write($"* {details.RecentCount} RECENT\r\n");
+            Context.CommandProvider.Write($"* OK [UIDVALIDITY {details.UidValidity}] UIDVALIDITY\r\n");
+            Context.CommandProvider.Write($"* OK [UIDNEXT {details.UidNext}] UIDNEXT\r\n");
+            Context.CommandProvider.Write($"* OK [UNSEEN {details.UnseenCount}] UNSEEN\r\n");
+            Context.CommandProvider.Write($"{cmd.Tag} OK {cmd.Command}\r\n");
 
             while (Context.CommandProvider.IsSessionAlive)
             {

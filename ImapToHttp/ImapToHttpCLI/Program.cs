@@ -41,6 +41,10 @@ namespace ImapToHttpCLI
                             Console.ForegroundColor = ConsoleColor.Blue;
                             prefix = "<<";
                             break;
+                        case MessageType.Info:
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            prefix = "INF";
+                            break;
                     }
                     Console.Write(prefix + " ");
                     Console.ForegroundColor = ConsoleColor.Gray;

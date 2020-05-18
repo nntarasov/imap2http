@@ -7,9 +7,9 @@ namespace ImapProtocol.ImapStateControllers
         public override ImapState State { get; } = ImapState.Delete;
         protected override bool RunInternal(ImapCommand cmd)
         {
-            var mailbox = cmd.Args;
+            var mailbox = cmd.Args.Trim();
 
-            if (mailbox.ToUpper() == "INBOX")
+            if (!Context.EntityProvider.DeleteDirectory(mailbox))
             {
                 Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");
                 return true;

@@ -15,10 +15,9 @@ namespace ImapProtocol
             Range = 2
         }
         
-        public readonly static (MessageSequenceType, long[]) BadSequence = (MessageSequenceType.None, new long[0]);
-        public static (MessageSequenceType, long[]) GetMessageSequenceSet(string arg)
+        public readonly static (MessageSequenceType, int[]) BadSequence = (MessageSequenceType.None, new int[0]);
+        public static (MessageSequenceType, int[]) GetMessageSequenceSet(string arg)
         {
-            
             if (string.IsNullOrWhiteSpace(arg))
             {
                 return BadSequence;
@@ -29,21 +28,21 @@ namespace ImapProtocol
                 if (arg.Contains('*'))
                 {
                     var match = Regex.Match(arg, @"(\d+):\*");
-                    long from;
-                    if (!match.Success || !long.TryParse(match.Groups[1].Value, out from))
+                    int from;
+                    if (!match.Success || !int.TryParse(match.Groups[1].Value, out from))
                     {
                         return BadSequence;
                     }
 
-                    return (MessageSequenceType.Range, new[] {from, long.MaxValue});
+                    return (MessageSequenceType.Range, new[] {from, int.MaxValue});
                 }
                 else
                 {
                     var match = Regex.Match(arg, @"(\d+):(\d+)");
-                    long from, to;
+                    int from, to;
                     if (!match.Success || 
-                        !long.TryParse(match.Groups[1].Value, out from) ||
-                        !long.TryParse(match.Groups[2].Value, out to))
+                        !int.TryParse(match.Groups[1].Value, out from) ||
+                        !int.TryParse(match.Groups[2].Value, out to))
                     {
                         return BadSequence;
                     }
@@ -53,7 +52,7 @@ namespace ImapProtocol
 
             var values = arg.Split(',').Select(s => s.Trim());
             var parsedValues = values
-                .Select(v => (long.TryParse(v, out var result), result))
+                .Select(v => (int.TryParse(v, out var result), result))
                 .ToList();
             if (parsedValues.Any(p => !p.Item1))
             {
@@ -64,47 +63,37 @@ namespace ImapProtocol
         }
         
         
-        public static IEnumerable<long> ExtractRealMessageIds((ImapCommon.MessageSequenceType, long[]) range, MessageIdType idType)
+        public static IEnumerable<int> ExtractRealMessageIds(IImapContext ctx, (ImapCommon.MessageSequenceType, int[]) range, MessageIdType idType)
         {
-            var existMessageIds = Messages; // TODO
-            
             switch (range.Item1)
             {
                 case ImapCommon.MessageSequenceType.None:
-                    return new long[0];
+                    return new int[0];
                 case ImapCommon.MessageSequenceType.Exact:
                     if (idType == MessageIdType.Uid)
                     {
-                        return range.Item2.Where(i => existMessageIds.ContainsKey(i));
+                        return range.Item2
+                            .Where(i => ctx.EntityProvider.DirectoryProvider.HasMessage(i));
                     }
-
-                    var list = existMessageIds.Keys
-                        .OrderByDescending(k => k)
-                        .ToList();
-
-                    return range.Item2
-                        .Where(i => i > 0 && i < list.Count)
-                        .Select(i => list[(int)i])
-                        .ToList();
-                    
+                    return ctx.EntityProvider.DirectoryProvider.GetUids(range.Item2);
                 case ImapCommon.MessageSequenceType.Range:
+                    int min = range.Item2[0];
+                    int max = range.Item2[1];
+                    var idsRange = Enumerable.Range(range.Item2[0], max - min + 1).ToArray();
+                    
                     if (idType == MessageIdType.Uid)
                     {
-                        return existMessageIds.Keys.Where(k => k >= range.Item2[0] && k <= range.Item2[1]);
+                        return idsRange
+                            .Where(i => ctx.EntityProvider.DirectoryProvider.HasMessage(i));
                     }
-                    return existMessageIds.Keys
-                        .OrderByDescending(k => k)
-                        .Skip((int) range.Item2[0] - 1)
-                        .Take((int) range.Item2[1] - (int) range.Item2[0] + 1)
-                        .ToList();
+                    return ctx.EntityProvider.DirectoryProvider.GetUids(idsRange);
                 default:
                     throw new ArgumentException(nameof(range));
             }
         }
         
         
-        public static DateTime[] MessageDts = new DateTime[] {DateTime.Now, DateTime.Today, DateTime.Now, DateTime.Now};
-        public static Dictionary<long, string> Messages = new Dictionary<long, string>() { {29,
+        public static Dictionary<int, string> Messagxes = new Dictionary<int, string>() { {29,
             @"Received: from mxfront3q.mail.yandex.net (localhost [127.0.0.1])
 	by mxfront3q.mail.yandex.net with LMTP id XHgJiklRSE-oiZJ5R89
 	for <nektar97@yandex.ru>; Tue, 12 May 2020 00:51:02 +0300

@@ -11,13 +11,6 @@ namespace ImapProtocol.ImapStateControllers
 
         public class StoreFlagData
         {
-            public enum StoreFlagOperation
-            {
-                None = 0,
-                Add = 1,
-                Replace = 2,
-                Delete = 3
-            }
 
             public StoreFlagOperation Operation { get; set; }
             public string[] Flags { get; set; }
@@ -33,20 +26,20 @@ namespace ImapProtocol.ImapStateControllers
             }
 
 
-            var operation = StoreFlagData.StoreFlagOperation.None;
+            var operation = StoreFlagOperation.None;
             if (!match.Groups["op"].Success)
             {
-                operation = StoreFlagData.StoreFlagOperation.Replace;
+                operation = StoreFlagOperation.Replace;
             }
             else
             {
                 switch (match.Groups["op"].Value)
                 {
                     case "+":
-                        operation = StoreFlagData.StoreFlagOperation.Add;
+                        operation = StoreFlagOperation.Add;
                         break;
                     case "-":
-                        operation = StoreFlagData.StoreFlagOperation.Delete;
+                        operation = StoreFlagOperation.Delete;
                         break;
                 }
             }
@@ -73,35 +66,44 @@ namespace ImapProtocol.ImapStateControllers
             var sequenceSet = ImapCommon.GetMessageSequenceSet(args[0]);
             var idType = Context.States.Any(s => s.State == ImapState.Uid) ? MessageIdType.Uid : MessageIdType.Id;
 
-            var messageIds = ImapCommon.ExtractRealMessageIds(sequenceSet, idType);
+            var messageIds = ImapCommon.ExtractRealMessageIds(Context, sequenceSet, idType).ToArray();
             var flagsData = ParseStoreFlagData(cmd.Args);
             if (flagsData == null)
             {
-                Context.CommandProvider.Write($"{cmd.Tag} BAD");
+                Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");
                 return true;
+            }
+
+            if (!ApplyStore(messageIds, flagsData))
+            {
+                return false;
+            }
+
+            Context.CommandProvider.Write($"{cmd.Tag} OK STORE completed\r\n");
+            return true;
+        }
+
+        private bool ApplyStore(int[] messageIds, StoreFlagData flagData)
+        {
+            var storeResult = Context
+                .EntityProvider
+                .MailProvider
+                .StoreFlags(messageIds, flagData.Flags, flagData.Operation);
+            if (!storeResult)
+            {
+                return false;
             }
 
             foreach (var messageId in messageIds)
             {
-                if (!ApplyStore(messageId, flagsData))
+                if (!flagData.IsSilent)
                 {
-                    return false;
-                }
-            }
-            
-            Context.CommandProvider.Write($"{cmd.Tag} OK STORE completed");
-            return true;
-        }
-
-        private bool ApplyStore(long messageId, StoreFlagData flagData)
-        {
-            if (!flagData.IsSilent)
-            {
-                var cmd = new ImapCommand($"xx UID FETCH {messageId} (FLAGS)");
-                var uidResult = new ImapUidStateController().Run(Context, cmd);
-                if (!uidResult)
-                {
-                    return false;
+                    var cmd = new ImapCommand($"xx UID FETCH {messageId} (FLAGS)");
+                    var uidResult = new ImapUidStateController().Run(Context, cmd);
+                    if (!uidResult)
+                    {
+                        return false;
+                    }
                 }
             }
 

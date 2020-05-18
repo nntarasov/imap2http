@@ -6,5 +6,6 @@ namespace ImapProtocol.Contracts
         public string Tag { get; set; }
         public string Command { get; set; }
         public string Args { get; set; }
+        public object StateData { get; set; }
     }
 }

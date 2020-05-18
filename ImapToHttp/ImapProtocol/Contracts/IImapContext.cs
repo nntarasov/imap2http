@@ -9,6 +9,8 @@ namespace ImapProtocol.Contracts
         bool TryPopState(out ImapStateItem currentState);
         void AddState(ImapStateItem state);
         ITcpCommandProvider CommandProvider { get; }
-
+        IEntityProvider EntityProvider { get; }
+        int ThreadId { get; }
+        IList<string> SubscribedMailboxes { get; }
     }
 }

@@ -7,6 +7,8 @@ namespace ImapProtocol.ImapStateControllers
 {
     public class ImapAuthenticateController : ImapStateController
     {
+        private static ILogger Logger = LoggerFactory.GetLogger();
+        
         public override ImapState State { get; } = ImapState.Authenticate;
 
         protected override bool RunInternal(ImapCommand cmd)
@@ -33,12 +35,13 @@ namespace ImapProtocol.ImapStateControllers
                     var authcid = identities[1];
                     var password = identities[2];
 
-                    if (authcid != "ntarasov" && password != "123456")
+                    string login = authcid;
+                    if (!Context.EntityProvider.UserProvider.Authorize(login, password))
                     {
                         Context.CommandProvider.Write($"{cmd.Tag} NO AUTH=PLAIN\r\n");
                         return true;
                     }
-
+                    Logger.Print(Context.ThreadId, MessageType.Info, $"User authorized. login: {login}");
                     Context.CommandProvider.Write($"{cmd.Tag} OK AUTH=PLAIN\r\n");
                     break;
                 default:
@@ -88,7 +91,7 @@ namespace ImapProtocol.ImapStateControllers
                 
                 else if (imapCommand.Command == "EXAMINE")
                 {
-                    new ImapExamineStateController().Run(Context, imapCommand);
+                    new ImapSelectStateController().Run(Context, imapCommand);
                 }
 
 

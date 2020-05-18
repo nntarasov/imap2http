@@ -20,16 +20,10 @@ namespace ImapProtocol.ImapStateControllers
             var refname = match.Groups["refname"].Value;
             var boxWildcard = match.Groups["box"].Value;
 
-            var mailboxes = new[]
-            {
-                new[] { "INBOX" },
-                new[] { "Junk"},
-                new[] { "Sent"},
-                //new [] { "important", "1"},
-                //new [] { "important" , "2"}
-            };
-
             var path = refname.Split('/');
+
+            var mailboxes = Context.SubscribedMailboxes
+                .Select(box => box.Split('/'));
             
             var refResultBoxes = mailboxes
                 .Where(m => m.Take(path.Length).SequenceEqual(path))

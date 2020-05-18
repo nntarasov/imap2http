@@ -90,7 +90,11 @@ namespace ImapProtocol
 
         public void OnTcpConnect()
         {
-            _connectedStateController.Run(new ImapContext(this), new ImapCommand());
+            var entityProvider = new EntityProvider();
+            var ctx = new ImapContext(this, _sessionContext.ThreadId);
+            ctx.EntityProvider = entityProvider;
+
+            _connectedStateController.Run(ctx, new ImapCommand());
             Logger.Print(_sessionContext.ThreadId, MessageType.None, "Connection closed");
         }
     }
