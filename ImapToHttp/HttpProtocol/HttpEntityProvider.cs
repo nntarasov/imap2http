@@ -1,10 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using HttpProtocol.Contracts;
 using HttpProtocol.Requests;
 using HttpProtocol.Responses;
-using ImapToHttpCore;
 using ImapToHttpCore.Contracts;
 using ImapToHttpCore.Entities;
 using ImapToHttpCore.EntityProviders;
