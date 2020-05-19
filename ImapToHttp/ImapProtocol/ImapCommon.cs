@@ -61,8 +61,7 @@ namespace ImapProtocol
 
             return (MessageSequenceType.Exact, parsedValues.Select(p => p.result).ToArray());
         }
-        
-        
+
         public static IEnumerable<int> ExtractRealMessageIds(IImapContext ctx, (ImapCommon.MessageSequenceType, int[]) range, MessageIdType idType)
         {
             switch (range.Item1)

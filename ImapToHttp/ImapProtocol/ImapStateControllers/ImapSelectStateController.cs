@@ -21,14 +21,14 @@ namespace ImapProtocol.ImapStateControllers
             var mailboxes = Context.EntityProvider.GetAllDirectories();
             
             var mailboxArg = match.Groups["box"].Value.Trim();
-            if (!mailboxes.Contains(mailboxArg))
+            if (!mailboxes.Values.Contains(mailboxArg))
             {
                 Context.CommandProvider.Write($"{cmd.Tag} NO\r\n");
                 return true;
             }
             
             var details = Context.EntityProvider.GetDirectoryDetails(mailboxArg);
-            if (details == null)
+            if (details == null || !Context.EntityProvider.SwitchDirectory(mailboxArg))
             {
                 Context.CommandProvider.Write($"{cmd.Tag} NO\r\n");
                 return true;
@@ -75,6 +75,12 @@ namespace ImapProtocol.ImapStateControllers
                         break;
                     case "STORE":
                         new ImapStoreStateController().Run(Context, imapCommand);
+                        break;
+                    case "CAPABILITY":
+                        new ImapCapabilityStateController().Run(Context, imapCommand);
+                        break;
+                    case "LSUB":
+                        new ImapLSubStateController().Run(Context, imapCommand);
                         break;
                 }
             }

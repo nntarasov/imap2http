@@ -23,6 +23,7 @@ namespace ImapProtocol.ImapStateControllers
 
             var path = refname.Split('/');
             var mailboxes = Context.EntityProvider.GetAllDirectories()
+                .Values
                 .Select(p => p.Split('/'))
                 .ToList();
 

@@ -7,6 +7,7 @@ namespace ImapProtocol.ImapStateControllers
         public override ImapState State { get; } = ImapState.Close;
         protected override bool RunInternal(ImapCommand cmd)
         {
+            Context.EntityProvider.SwitchDirectory(null);
             Context.CommandProvider.Write($"{cmd.Tag} OK CLOSE\r\n");
             return true;
         }

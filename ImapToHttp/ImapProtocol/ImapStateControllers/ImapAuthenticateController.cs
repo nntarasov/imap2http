@@ -53,52 +53,38 @@ namespace ImapProtocol.ImapStateControllers
             {
                 var command = Context.CommandProvider.Read();
                 var imapCommand = new ImapCommand(command);
-                if (imapCommand.Command == "LIST")
+                switch (imapCommand.Command)
                 {
-                    new ImapListStateController().Run(Context, imapCommand);
-                }
-                else if (imapCommand.Command == "SELECT")
-                {
-                    new ImapSelectStateController().Run(Context, imapCommand);
-                }
-                else if (imapCommand.Command == "LSUB")
-                {
-                    new ImapLSubStateController().Run(Context, imapCommand);
-                }
-                else if (imapCommand.Command == "SUBSCRIBE")
-                {
-                    new ImapSubscribeStateController().Run(Context, imapCommand);
-                }
-                else if (imapCommand.Command == "UNSUBSCRIBE")
-                {
-                    new ImapUnsubscribeStateController().Run(Context, imapCommand);
-                }
-                
-                else if (imapCommand.Command == "CREATE")
-                {
-                    new ImapCreateStateController().Run(Context, imapCommand);
-                }
-                
-                else if (imapCommand.Command == "DELETE")
-                {
-                    new ImapDeleteStateController().Run(Context, imapCommand);
-                }
-                
-                else if (imapCommand.Command == "RENAME")
-                {
-                    new ImapRenameStateController().Run(Context, imapCommand);
-                }
-                
-                else if (imapCommand.Command == "EXAMINE")
-                {
-                    new ImapSelectStateController().Run(Context, imapCommand);
-                }
-
-
-                // TODO: REMOVE
-                else if (imapCommand.Command == "CAPABILITY")
-                {
-                    new ImapCapabilityStateController().Run(Context, imapCommand);
+                    case "LIST":
+                        new ImapListStateController().Run(Context, imapCommand);
+                        break;
+                    case "SELECT":
+                        new ImapSelectStateController().Run(Context, imapCommand);
+                        break;
+                    case "LSUB":
+                        new ImapLSubStateController().Run(Context, imapCommand);
+                        break;
+                    case "SUBSCRIBE":
+                        new ImapSubscribeStateController().Run(Context, imapCommand);
+                        break;
+                    case "UNSUBSCRIBE":
+                        new ImapUnsubscribeStateController().Run(Context, imapCommand);
+                        break;
+                    case "CREATE":
+                        new ImapCreateStateController().Run(Context, imapCommand);
+                        break;
+                    case "DELETE":
+                        new ImapDeleteStateController().Run(Context, imapCommand);
+                        break;
+                    case "RENAME":
+                        new ImapRenameStateController().Run(Context, imapCommand);
+                        break;
+                    case "EXAMINE":
+                        new ImapSelectStateController().Run(Context, imapCommand);
+                        break;
+                    case "CAPABILITY":
+                        new ImapCapabilityStateController().Run(Context, imapCommand);
+                        break;
                 }
             }
             return true;

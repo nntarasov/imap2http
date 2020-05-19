@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ImapProtocol.Contracts.EntityProviders;
 
 namespace ImapProtocol.Contracts
@@ -6,14 +7,16 @@ namespace ImapProtocol.Contracts
     {
         IMailProvider MailProvider { get; }
         IDirectoryProvider DirectoryProvider { get; }
-        IUserProvider UserProvider { get; set; }
+        IUserProvider UserProvider { get; }
+
+        bool SwitchDirectory(string name);
 
         bool CreateDirectory(string name);
         bool DeleteDirectory(string name);
         bool RenameDirectory(string name, string newName);
         int[] Expunge();
 
-        string[] GetAllDirectories();
+        IDictionary<int, string> GetAllDirectories();
         DirectoryDetails GetDirectoryDetails(string directory);
     }
 }

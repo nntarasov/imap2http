@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using ImapProtocol.Contracts;
-using ImapProtocol.Tools;
 
 namespace ImapProtocol.ImapStateControllers
 {
@@ -230,7 +229,6 @@ namespace ImapProtocol.ImapStateControllers
             21*/
             //ParseDataItems(cmd.Args);
 
-            Context.EntityProvider.MailProvider.GetMessage(messageId);
             var message = Context.EntityProvider.MailProvider.GetMessage(messageId);
             
             var messageBuilder = new StringBuilder($"* {messageId} FETCH (");
