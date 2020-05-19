@@ -6,6 +6,7 @@ namespace ImapToHttpCore.Contracts
         In,
         Out,
         Error,
-        Info
+        Info,
+        Debug
     }
 }

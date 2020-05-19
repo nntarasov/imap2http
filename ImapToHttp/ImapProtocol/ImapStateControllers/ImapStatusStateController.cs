@@ -20,7 +20,7 @@ namespace ImapProtocol.ImapStateControllers
             var mailboxes = Context.EntityProvider.GetAllDirectories();
 
             var mailboxArg = match.Groups["box"].Value.Trim();
-            if (!mailboxes.Values.Contains(mailboxArg))
+            if (mailboxes == null || !mailboxes.Values.Contains(mailboxArg))
             {
                 Context.CommandProvider.Write($"{cmd.Tag} NO\r\n");
                 return true;

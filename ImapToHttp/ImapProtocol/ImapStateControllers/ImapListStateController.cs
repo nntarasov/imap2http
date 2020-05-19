@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using ImapProtocol.Contracts;
@@ -22,7 +23,7 @@ namespace ImapProtocol.ImapStateControllers
             var boxWildcard = match.Groups["box"].Value;
 
             var path = refname.Split('/');
-            var mailboxes = Context.EntityProvider.GetAllDirectories()
+            var mailboxes = (Context.EntityProvider.GetAllDirectories() ?? new Dictionary<int, string>())
                 .Values
                 .Select(p => p.Split('/'))
                 .ToList();

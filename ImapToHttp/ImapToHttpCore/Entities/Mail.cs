@@ -10,10 +10,7 @@ namespace ImapToHttpCore.Entities
         public IDictionary<string, string> Headers { get; set; }
         public string Body { get; set; }
         public DateTime Date { get; set; }
-        public string[] Flags { get; set; }
         public int UId { get; set; }
-        public Directory Location { get; set; }
-        public string ContentType { get; set; }
 
         private string _rfc2822 = null;
         public string Rfc2822

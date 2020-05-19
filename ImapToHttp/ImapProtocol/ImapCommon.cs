@@ -74,7 +74,7 @@ namespace ImapProtocol
                         return range.Item2
                             .Where(i => ctx.EntityProvider.DirectoryProvider.HasMessage(i));
                     }
-                    return ctx.EntityProvider.DirectoryProvider.GetUids(range.Item2);
+                    return ctx.EntityProvider.DirectoryProvider.GetUids(range.Item2) ?? Enumerable.Empty<int>();
                 case ImapCommon.MessageSequenceType.Range:
                     int min = range.Item2[0];
                     int max = range.Item2[1];
@@ -85,7 +85,7 @@ namespace ImapProtocol
                         return idsRange
                             .Where(i => ctx.EntityProvider.DirectoryProvider.HasMessage(i));
                     }
-                    return ctx.EntityProvider.DirectoryProvider.GetUids(idsRange);
+                    return ctx.EntityProvider.DirectoryProvider.GetUids(idsRange) ?? Enumerable.Empty<int>();
                 default:
                     throw new ArgumentException(nameof(range));
             }
