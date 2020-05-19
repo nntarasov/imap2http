@@ -1,4 +1,4 @@
-namespace ImapProtocol.Contracts
+namespace ImapToHttpCore.Contracts
 {
     public interface ILogger
     {

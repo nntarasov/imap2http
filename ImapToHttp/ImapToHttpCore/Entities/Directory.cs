@@ -1,4 +1,4 @@
-namespace ImapProtocol.Entities
+namespace ImapToHttpCore.Entities
 {
     public class Directory
     {

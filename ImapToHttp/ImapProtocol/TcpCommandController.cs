@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using ImapProtocol.Contracts;
 using ImapProtocol.ImapStateControllers;
+using ImapToHttpCore;
+using ImapToHttpCore.Contracts;
 
 namespace ImapProtocol
 {
@@ -15,14 +17,16 @@ namespace ImapProtocol
 
         private readonly ITcpController _tcpController;
         private readonly ITcpSessionContext _sessionContext;
+        private readonly IEntityProviderFactory _entityProviderFactory;
         private readonly ImapStateController _connectedStateController = new ImapConnectedStateController();
 
         private const string CommandSeparator = "\r\n";
 
-        public TcpCommandController(ITcpController tcpController, ITcpSessionContext sessionContext)
+        public TcpCommandController(ITcpController tcpController, ITcpSessionContext sessionContext, IEntityProviderFactory entityProviderFactory)
         {
             _tcpController = tcpController;
             _sessionContext = sessionContext;
+            _entityProviderFactory = entityProviderFactory;
         }
 
         public bool IsSessionAlive => _sessionContext.IsSessionAlive;
@@ -90,9 +94,8 @@ namespace ImapProtocol
 
         public void OnTcpConnect()
         {
-            var entityProvider = new EntityProvider();
             var ctx = new ImapContext(this, _sessionContext.ThreadId);
-            ctx.EntityProvider = entityProvider;
+            ctx.EntityProvider = _entityProviderFactory.Initiate();
 
             _connectedStateController.Run(ctx, new ImapCommand());
             Logger.Print(_sessionContext.ThreadId, MessageType.None, "Connection closed");

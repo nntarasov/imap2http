@@ -1,4 +1,4 @@
-namespace ImapProtocol.ImapStateControllers
+namespace ImapToHttpCore.Contracts
 {
     public enum StoreFlagOperation
     {

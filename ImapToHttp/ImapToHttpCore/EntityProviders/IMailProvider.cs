@@ -1,7 +1,7 @@
-using ImapProtocol.Entities;
-using ImapProtocol.ImapStateControllers;
+using ImapToHttpCore.Contracts;
+using ImapToHttpCore.Entities;
 
-namespace ImapProtocol.Contracts.EntityProviders
+namespace ImapToHttpCore.EntityProviders
 {
     public interface IMailProvider
     {

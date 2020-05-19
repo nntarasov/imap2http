@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ImapProtocol.Contracts;
-using ImapProtocol.Contracts.EntityProviders;
-using ImapProtocol.Entities;
-using ImapProtocol.ImapStateControllers;
+using ImapToHttpCore;
+using ImapToHttpCore.Contracts;
+using ImapToHttpCore.Entities;
+using ImapToHttpCore.EntityProviders;
 
-namespace ImapProtocol
+namespace HttpProtocol
 {
     public class EntityProvider : IEntityProvider, IMailProvider, IDirectoryProvider, IUserProvider
     {

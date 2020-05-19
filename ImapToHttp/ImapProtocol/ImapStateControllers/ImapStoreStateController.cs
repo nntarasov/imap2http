@@ -1,6 +1,8 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using ImapProtocol.Contracts;
+using ImapToHttpCore;
+using ImapToHttpCore.Contracts;
 
 namespace ImapProtocol.ImapStateControllers
 {

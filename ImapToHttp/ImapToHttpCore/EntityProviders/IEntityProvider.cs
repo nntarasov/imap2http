@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using ImapProtocol.Contracts.EntityProviders;
+using ImapToHttpCore.Entities;
 
-namespace ImapProtocol.Contracts
+namespace ImapToHttpCore.EntityProviders
 {
     public interface IEntityProvider
     {

@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using ImapProtocol.Contracts;
+using ImapToHttpCore;
+using ImapToHttpCore.Contracts;
 
 namespace ImapProtocol
 {
@@ -12,7 +14,8 @@ namespace ImapProtocol
         private readonly ILogger _logger = LoggerFactory.GetLogger();
         
         private const int BufferLength = 1024;
-        private readonly TcpListener _tcpListener;  
+        private readonly TcpListener _tcpListener;
+        private readonly IEntityProviderFactory _entityProviderFactory;
         
         public class TcpSessionContext : ITcpSessionContext
         {
@@ -22,8 +25,9 @@ namespace ImapProtocol
             public bool IsSessionAlive { get; set; }
         }
 
-        public TcpController(string addressString, int port)
+        public TcpController(string addressString, int port, IEntityProviderFactory entityProviderFactory)
         {
+            _entityProviderFactory = entityProviderFactory;
             var address = IPAddress.Parse(addressString);
             _tcpListener = new TcpListener(address, port);
         }
@@ -96,8 +100,8 @@ namespace ImapProtocol
                 TcpClient = client,
                 IsSessionAlive = true
             };
-            var commandController = new TcpCommandController(this, tcpContext);
-
+            var commandController = new TcpCommandController(this, tcpContext, _entityProviderFactory);
+            
             commandController.OnTcpConnect();
             // Shutdown and end connection
             Console.WriteLine($"[{threadId}] Connection closed");

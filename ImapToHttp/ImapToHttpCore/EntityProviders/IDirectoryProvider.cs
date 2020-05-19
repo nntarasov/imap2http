@@ -1,4 +1,4 @@
-namespace ImapProtocol.Contracts.EntityProviders
+namespace ImapToHttpCore.EntityProviders
 {
     public interface IDirectoryProvider
     {

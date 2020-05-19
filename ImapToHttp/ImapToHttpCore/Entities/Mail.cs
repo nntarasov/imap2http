@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace ImapProtocol.Entities
+namespace ImapToHttpCore.Entities
 {
     public class Mail
     {

@@ -1,6 +1,6 @@
-using ImapProtocol.Contracts;
+using ImapToHttpCore.Contracts;
 
-namespace ImapProtocol
+namespace ImapToHttpCore
 {
     public static class LoggerFactory
     {

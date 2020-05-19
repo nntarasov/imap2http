@@ -1,4 +1,4 @@
-namespace ImapProtocol.Contracts
+namespace ImapToHttpCore.Entities
 {
     public class DirectoryDetails
     {

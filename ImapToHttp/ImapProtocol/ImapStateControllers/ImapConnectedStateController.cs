@@ -1,4 +1,5 @@
 using ImapProtocol.Contracts;
+using ImapToHttpCore;
 
 namespace ImapProtocol.ImapStateControllers
 {
