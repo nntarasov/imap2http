@@ -125,11 +125,6 @@ namespace HttpProtocol
 
         public IDictionary<int, string> GetAllDirectories()
         {
-            /*return new Dictionary<int, string>
-            {
-                { 1, "INBOX" }
-            };*/
-
             var response = _httpClient.Request("/imap/directories/get", new object());
             if (response == null)
             {

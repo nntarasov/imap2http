@@ -19,7 +19,7 @@ namespace HttpProtocol
         
         public string Request(string path, string jsonData)
         {
-            string url = _host.TrimEnd('/') + '/' + path;
+            string url = _host.TrimEnd('/') + '/' + path.TrimStart('/');
             try
             {
                 Logger.Print(0, MessageType.Debug, $"Request url: {url}");

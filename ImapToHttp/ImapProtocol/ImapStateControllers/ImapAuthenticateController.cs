@@ -23,6 +23,12 @@ namespace ImapProtocol.ImapStateControllers
                     // RFC 4616.2. PLAIN SASL Mechanism. 
                     Context.CommandProvider.Write("+\r\n");
                     var credentialsEncoded = Context.CommandProvider.Read();
+                    if (credentialsEncoded == "*") // cancel
+                    {
+                        Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");
+                        return true;
+                    }
+                    
                     var credentialBytes = Convert.FromBase64String(credentialsEncoded);
                     var credentials = Encoding.UTF8.GetString(credentialBytes);
 

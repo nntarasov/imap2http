@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpProtocol", "HttpProtoco
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImapToHttpCore", "ImapToHttpCore\ImapToHttpCore.csproj", "{35A557AF-27C8-43D0-B973-818AE9B43FFC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImapToHttpDemo", "ImapToHttpDemo\ImapToHttpDemo.csproj", "{73CAF227-04EF-4D3F-ADF2-D5EA96391036}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImapToHttpDemo", "ImapToHttpDemo\ImapToHttpDemo.csproj", "{B3E18C5C-2D3B-4CED-A509-3E49816561B4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,9 +32,9 @@ Global
 		{35A557AF-27C8-43D0-B973-818AE9B43FFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{35A557AF-27C8-43D0-B973-818AE9B43FFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{35A557AF-27C8-43D0-B973-818AE9B43FFC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{73CAF227-04EF-4D3F-ADF2-D5EA96391036}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{73CAF227-04EF-4D3F-ADF2-D5EA96391036}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{73CAF227-04EF-4D3F-ADF2-D5EA96391036}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{73CAF227-04EF-4D3F-ADF2-D5EA96391036}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3E18C5C-2D3B-4CED-A509-3E49816561B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3E18C5C-2D3B-4CED-A509-3E49816561B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3E18C5C-2D3B-4CED-A509-3E49816561B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3E18C5C-2D3B-4CED-A509-3E49816561B4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
