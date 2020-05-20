@@ -130,8 +130,8 @@ namespace HttpProtocol
             {
                 return null;
             }
-
-            return response.FromJson<AllDirectoriesResponse>()?.Directories;
+            return response.FromJson<AllDirectoriesResponse>()?.Directories?
+                .ToDictionary(d => d.Id, d => d.Name);
         }
 
         public DirectoryDetails GetDirectoryDetails(string directory)
@@ -166,15 +166,6 @@ namespace HttpProtocol
                 UidNext = dto.UidNext,
                 UidValidity = dto.UidValidity
             };
-            /*return new DirectoryDetails
-            {
-                ExistCount = 2,
-                Flags = new[] {"\\Deleted", "\\Unseen", "\\Important"},
-                RecentCount = 2,
-                UidNext = 3,
-                UidValidity = 3,
-                UnseenCount = 2
-            };*/
         }
 
         public Mail GetMessage(int uid)
@@ -190,7 +181,7 @@ namespace HttpProtocol
                 return null;
             }
 
-            var headers = dto.Headers ?? new Dictionary<string, string>();
+            var headers = dto.Headers ?? new MessageHeaderResponse[0];
             var headersCapitalized = headers.ToDictionary(h => h.Key.ToUpper(), h => h.Value);
 
             var defaultHeaders = new Dictionary<string, string>
@@ -214,51 +205,6 @@ namespace HttpProtocol
                 Headers = headersCapitalized,
                 UId = uid
             };
-            
-            /*LoggerFactory.GetLogger().Print(uid.ToString());
-            if (uid != 1 && uid != 2)
-            {
-                return null;
-            }
-
-            if (uid == 1)
-            {
-                return new Mail
-                {
-                    Body = "Hello, world",
-                    Date = DateTime.Now,
-                    UId = 1,
-                    Headers = new Dictionary<string, string>
-                    {
-                        {"From".ToUpper(), "Nikita Tarasov <mail@ntarasov.ru>"},
-                        {"To".ToUpper(), "mail <mail@ntarasov.ru>"},
-                        {"Subject".ToUpper(), "The test letter!"},
-                        {"Date".ToUpper(), "Sun, 26 Apr 2020 20:07:35 +0300"},
-                        {"Message-Id".ToUpper(), "<1255x51xxxx587920843@mail.yandex.ru>"},
-                        {"Content-Transfer-Encoding".ToUpper(), "8bit"},
-                        {"Content-Type".ToUpper(), "text/html; charset=utf-8"},
-                        {"MIME-Version".ToUpper(), "1.0"}
-                    }
-                };
-            }
-
-            return new Mail
-            {
-                Body = "Hello,<b> world</b>",
-                Date = DateTime.Now,
-                UId = 2,
-                Headers = new Dictionary<string, string>
-                {
-                    {"From", "Nikita Tarasov <mail@ntarasov.ru>"},
-                    {"To", "Vasuas <mail@ntarasov.ru>"},
-                    {"Subject", "TSecong letter"},
-                    {"Date", "Sun, 26 Apr 2020 21:07:35 +0300"},
-                    {"Message-Id", "<12920843@mail.yandex.ru>"},
-                    {"Content-Transfer-Encoding", "8bit"},
-                    {"Content-Type", "text/html; charset=utf-8"},
-                    {"MIME-Version", "1.0"}
-                }
-            };*/
         }
 
         public bool StoreFlags(int[] uids, string[] flags, StoreFlagOperation operation)
@@ -282,10 +228,6 @@ namespace HttpProtocol
 
         public int[] GetUids(params int[] relativeIds)
         {
-            //return relativeIds.Where(i => i == 1 || i == 2)
-            //    .Select(i => i == 1 ? 2 : 1)
-            //    .ToArray();
-
             if ((relativeIds?.Length ?? 0) == 0 || !_currentDirectoryId.HasValue)
             {
                 return null;
@@ -301,7 +243,6 @@ namespace HttpProtocol
 
         public bool HasMessage(int uid)
         {
-            //return uid == 1 || uid == 2;
             if (!_currentDirectoryId.HasValue)
             {
                 return false;
