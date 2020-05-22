@@ -120,7 +120,7 @@ namespace HttpProtocol
                 Id = _currentDirectoryId.Value
             });
 
-            return response?.FromJson<DirectoryExpungeResponse>()?.MessageIds;
+            return response?.FromJson<DirectoryExpungeResponse>()?.RelativeIds;
         }
 
         public IDictionary<int, string> GetAllDirectories()

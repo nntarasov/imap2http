@@ -5,7 +5,7 @@ namespace HttpProtocol.Responses
     [DataContract]
     public class DirectoryExpungeResponse
     {
-        [DataMember(Name = "message_ids")]
-        public int[] MessageIds { get; set; }
+        [DataMember(Name = "relative_ids")]
+        public int[] RelativeIds { get; set; }
     }
 }
