@@ -4,7 +4,7 @@ using ImapToHttpCore.Contracts;
 namespace HttpProtocol.Requests
 {
     [DataContract]
-    public class MessageStoreFlagsRequest
+    public class MessageStoreFlagsRequest : AuthorizedBase
     {
         [DataMember(Name = "flags")]
         public string[] Flags { get; set; }

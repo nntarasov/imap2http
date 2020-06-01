@@ -56,7 +56,8 @@ namespace HttpProtocol
             }
             var response = _httpClient.Request("/imap/directory/create", new DirectoryCreateRequest
             {
-                Name = name
+                Name = name,
+                Who = Current.Login
             });
             return response.IsOperationSuccessful();
         }
@@ -77,7 +78,8 @@ namespace HttpProtocol
             
             var response = _httpClient.Request("/imap/directory/delete", new DirectoryDeleteRequest
             {
-                Id = id.Value
+                Id = id.Value,
+                Who = Current.Login
             });
             return response.IsOperationSuccessful();
         }
@@ -103,7 +105,8 @@ namespace HttpProtocol
             var response = _httpClient.Request("/imap/directory/rename", new DirectoryRenameRequest
             {
                 Id = id.Value,
-                NewName = newName
+                NewName = newName,
+                Who = Current.Login
             });
             return response.IsOperationSuccessful();
         }
@@ -117,7 +120,8 @@ namespace HttpProtocol
             
             var response = _httpClient.Request("/imap/directory/expunge", new DirectoryExpungeRequest
             {
-                Id = _currentDirectoryId.Value
+                Id = _currentDirectoryId.Value,
+                Who = Current.Login
             });
 
             return response?.FromJson<DirectoryExpungeResponse>()?.RelativeIds;
@@ -125,7 +129,10 @@ namespace HttpProtocol
 
         public IDictionary<int, string> GetAllDirectories()
         {
-            var response = _httpClient.Request("/imap/directories/get", new object());
+            var response = _httpClient.Request("/imap/directories/get", new AllDirectoriesRequest
+            {
+                Who = Current.Login
+            });
             if (response == null)
             {
                 return null;
@@ -149,7 +156,8 @@ namespace HttpProtocol
 
             var response = _httpClient.Request("/imap/directory/details", new DirectoryDetailsRequest
             {
-                Id = id.Value
+                Id = id.Value,
+                Who = Current.Login
             });
 
             var dto = response?.FromJson<DirectoryDetailsResponse>();
@@ -172,7 +180,9 @@ namespace HttpProtocol
         {
             var response = _httpClient.Request("/imap/message/get", new MessageRequest
             {
-                Uid = uid
+                Uid = uid,
+                Who = Current.Login,
+                DirectoryId = _currentDirectoryId.Value
             });
 
             var dto = response?.FromJson<MessageResponse>();
@@ -220,7 +230,8 @@ namespace HttpProtocol
                 DirectoryId = _currentDirectoryId.Value,
                 Uids = uids,
                 Flags = flags,
-                Operation = operation
+                Operation = operation,
+                Who = Current.Login
             });
 
             return response.IsOperationSuccessful();
@@ -236,7 +247,8 @@ namespace HttpProtocol
             var response = _httpClient.Request("imap/directory/uids", new DirectoryUidsRequest
             {
                 DirectoryId = _currentDirectoryId.Value,
-                RelativeIds = relativeIds
+                RelativeIds = relativeIds,
+                Who = Current.Login
             });
             return response?.FromJson<DirectoryUidsResponse>()?.Uids;
         }
@@ -251,7 +263,8 @@ namespace HttpProtocol
             var response = _httpClient.Request("/imap/message/exists", new MessageExistsRequest
             {
                 DirectoryId = _currentDirectoryId.Value,
-                Uid = uid
+                Uid = uid,
+                Who = Current.Login
             });
 
             return response.IsOperationSuccessful();
@@ -276,7 +289,8 @@ namespace HttpProtocol
             {
                 DirectoryFromId = _currentDirectoryId.Value,
                 DirectoryToId = destId.Value,
-                UIds = uids
+                UIds = uids,
+                Who = Current.Login
             });
             return response.IsOperationSuccessful();
         }

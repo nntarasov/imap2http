@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 namespace HttpProtocol.Requests
 {
     [DataContract]
-    public class DirectoryUidsRequest
+    public class DirectoryUidsRequest : AuthorizedBase
     {
         [DataMember(Name = "directory_id")]
         public int DirectoryId { get; set; }

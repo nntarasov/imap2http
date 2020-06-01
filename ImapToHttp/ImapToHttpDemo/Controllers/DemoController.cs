@@ -1,35 +1,25 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 namespace ImapToHttpDemo.Controllers
 {
-    [DataContract]
-    public class OperationResult
-    {
-        [DataMember(Name = "success")]
-        public bool Success { get; set; }
-    }
-    
-    [DataContract]
-    public class AuthorizeRequest
-    {
-        [DataMember(Name = "login")]
-        public string Login { get; set; }
-        [DataMember(Name = "password")]
-        public string Password { get; set; }
-    }
-
     [ApiController]
     [Route("imap")]
     public class DemoController : ControllerBase
     {
         private readonly ILogger<DemoController> _logger;
+
+        private OperationResult Success = new OperationResult
+        {
+            Success = true
+        };
+
+        private OperationResult Fail = new OperationResult
+        {
+            Success = false
+        };
 
         public DemoController(ILogger<DemoController> logger)
         {
@@ -41,76 +31,66 @@ namespace ImapToHttpDemo.Controllers
         {
             if (req.Login == "ntarasov" && "123456".GetHashString() == req.Password)
             {
-                return new OperationResult
-                {
-                    Success = true
-                };
+                return Success;
             }
 
-            return new OperationResult
+            return Fail;
+        }
+
+        private IList<DirectoryData> GetFlatten(DirectoryData data)
+        {
+            var list = new List<DirectoryData>();
+            list.Add(data);
+            
+            if (data.Children?.Any() ?? false)
             {
-                Success = false
-            };
-        }
+                foreach (var child in data.Children)
+                {
+                    list.AddRange(GetFlatten(child));
+                }
+            }
 
-        [DataContract]
-        public class AllDirectoriesResponse
-        {
-            [DataMember(Name = "directories")] public DirectoryResponse[] Directories { get; set; }
-        }
-
-        [DataContract]
-        public class DirectoryResponse
-        {
-            [DataMember(Name = "id")] public int Id { get; set; }
-            [DataMember(Name = "name")] public string Name { get; set; }
+            return list;
         }
 
         [Route("directories/get")]
         public AllDirectoriesResponse GetDirectories()
         {
+            var flatten = new List<DirectoryData>();
+            foreach (var directory in Storage.Directories.Values)
+            {
+                flatten.AddRange(GetFlatten(directory));
+            }
+            
             return new AllDirectoriesResponse
             {
-                Directories = new[]
+                Directories = flatten.Select(f => new DirectoryResponse
                 {
-                    new DirectoryResponse
-                    {
-                        Id = 1,
-                        Name = "INBOX"
-                    }
-                }
+                    Id = f.Id,
+                    Name = f.Name
+                }).ToArray()
             };
-        }
-
-        [DataContract]
-        public class DirectoryIdRequest
-        {
-            [DataMember(Name = "id")] public int Id { get; set; }
         }
 
         [Route("directory/details")]
         public object GetDirectoryDetails(DirectoryIdRequest request)
         {
-            if (request?.Id == 1)
+            if (request?.Id == null || !Storage.Directories.ContainsKey(request.Id))
             {
-                return new
-                {
-                    exist_count = 2,
-                    flags = new[] {"\\Deleted", "\\Unseen", "\\Important"},
-                    recent_count = 2,
-                    uidnext = 3,
-                    uidvalidity = 3,
-                    unseen_count = 2
-                };
+                return Fail;
             }
 
-            return new object();
-        }
-
-        public class MessageRequest
-        {
-            public int directory_id { get; set; }
-            public int uid { get; set; }
+            var dir = Storage.Directories[request.Id];
+            return new
+            {
+                exist_count = dir.Messages.Count,
+                flags = dir.AvailableFlags,
+                recent_count = dir.Messages.Count(m => m.Flags.Contains("\\Recent")),
+                uidnext = Storage.Directories.Values.SelectMany(d => d.Messages)
+                              .Max(m => m.UId) + 1,
+                uidvalidity = 1337,
+                unseen_count = dir.Messages.Count(m => m.Flags.Contains("\\Unseen")),
+            };
         }
 
         [Route("message/exists")]
@@ -118,118 +98,57 @@ namespace ImapToHttpDemo.Controllers
         {
             if (request.directory_id == 1 && (request.uid == 1 || request.uid == 2))
             {
-                return new OperationResult
-                {
-                    Success = true
-                };
+                return Success;
             }
 
-            return new OperationResult
+            if (!Storage.Directories.ContainsKey(request.directory_id)
+                || Storage.Directories[request.directory_id].Messages
+                    .All(m => m.UId != request.uid))
             {
-                Success = false
-            };
-        }
-        
-        
-        [DataContract]
-        public class DirectoryUidsRequest
-        {
-            [DataMember(Name = "directory_id")]
-            public int directory_id { get; set; }
-            [DataMember(Name = "relative_ids")]
-            public int[] relative_ids { get; set; }
+                return Fail;
+            }
+
+            return Success;
         }
         
         [Route("directory/uids")]
         public object GetUids(DirectoryUidsRequest request)
         {
-            if (request.directory_id != 1)
+            if (!Storage.Directories.ContainsKey(request.directory_id))
             {
                 return new OperationResult
                 {
                     Success = false
                 };
             }
-            return new {
-                uids = request.relative_ids?.Where(i => i == 1 || i == 2)
-                .Select(i => i == 1 ? 2 : 1)
-                .ToArray()
-            };
-        }
-        
-        
-        [DataContract]
-        public class MessageHeaderResponse
-        {
-            [DataMember(Name = "key")]
-            public string Key { get; set; }
-            [DataMember(Name = "value")]
-            public string Value { get; set; }
-        }
-    
-        [DataContract]
-        public class MessageResponse
-        {
-            [DataMember(Name = "headers")]
-            public MessageHeaderResponse[] Headers { get; set; }
-            [DataMember(Name = "body")]
-            public string Body { get; set; }
-            [DataMember(Name = "date")]
-            public DateTime Date { get; set; }
-        }
 
+            var ordered = Storage.Directories[request.directory_id].Messages
+                .OrderByDescending(m => m.Date)
+                .ToList();
+
+            var response = new
+            {
+                uids = request.relative_ids
+                    .Where(r => r-1 >= 0 && r-1 < ordered.Count)
+                    .Select(r => ordered[r - 1].UId)
+                    .ToArray()
+            };
+
+            return response;
+        }
 
         [Route("message/get")]
         public object GetMessage(MessageRequest request)
         {
-            var headers1 = new Dictionary<string, string>
+            if (!Storage.Directories.ContainsKey(request.directory_id) ||
+                Storage.Directories[request.directory_id].Messages.All(m => m.UId != request.uid))
             {
-                {"From", "Nikita Tarasov <mail@ntarasov.ru>"},
-                {"To", "mail <mail@ntarasov.ru>"},
-                {"Subject", "The test letter!"},
-                {"Date", "Sun, 26 Apr 2020 20:07:35 +0300"},
-                {"Message-Id", "<1255x51xxxx587920843@mail.yandex.ru>"},
-                {"Content-Transfer-Encoding", "8bit"},
-                {"Content-Type", "text/html; charset=utf-8"},
-                {"MIME-Version", "1.0"}
-            };
-
-            var headers2 = new Dictionary<string, string>
-            {
-                {"From", "Nikita Tarasov <mail@ntarasov.ru>"},
-                {"To", "Vasuas <mail@ntarasov.ru>"},
-                {"Subject", "TSecong letter"},
-                {"Date", "Sun, 26 Apr 2020 21:07:35 +0300"},
-                {"Message-Id", "<12920843@mail.yandex.ru>"},
-                {"Content-Transfer-Encoding", "8bit"},
-                {"Content-Type", "text/html; charset=utf-8"},
-                {"MIME-Version", "1.0"}
-            };
-            
-            if (request.uid == 1)
-            {
-                return new MessageResponse
-                {
-                    Body = "Hello, world",
-                    Date = DateTime.Now,
-                    Headers = headers1.Select(h => new MessageHeaderResponse
-                    {
-                        Key = h.Key,
-                        Value = h.Value
-                    }).ToArray()
-                };
+                return Fail;
             }
 
-            return new MessageResponse
-            {
-                Body = "Hello,<b> world</b>",
-                Date = DateTime.Now,
-                Headers = headers2.Select(h => new MessageHeaderResponse
-                {
-                    Key = h.Key,
-                    Value = h.Value
-                }).ToArray()
-            };
+            return Storage.Directories[request.directory_id]
+                .Messages
+                .First(m => m.UId == request.uid);
         }
     }
 }
