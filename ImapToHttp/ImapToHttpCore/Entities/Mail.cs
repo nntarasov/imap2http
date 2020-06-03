@@ -11,6 +11,7 @@ namespace ImapToHttpCore.Entities
         public string Body { get; set; }
         public DateTime Date { get; set; }
         public int UId { get; set; }
+        public string[] Flags { get; set; }
 
         private string _rfc2822 = null;
         public string Rfc2822

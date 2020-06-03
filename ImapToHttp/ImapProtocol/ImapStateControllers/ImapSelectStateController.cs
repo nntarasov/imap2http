@@ -10,7 +10,7 @@ namespace ImapProtocol.ImapStateControllers
         protected override bool RunInternal(ImapCommand cmd)
         {
 
-            var match = Regex.Match(cmd.Args, @"^(?<box>\w+)");
+            var match = Regex.Match(cmd.Args, @"^(?<box>[^ ]+)");
 
             if (!match.Success || string.IsNullOrWhiteSpace(match.Groups["box"].Value))
             {
@@ -81,6 +81,9 @@ namespace ImapProtocol.ImapStateControllers
                         break;
                     case "LSUB":
                         new ImapLSubStateController().Run(Context, imapCommand);
+                        break;
+                    default:
+                        Context.CommandProvider.Write($"{imapCommand.Tag} BAD command\r\n");
                         break;
                 }
             }

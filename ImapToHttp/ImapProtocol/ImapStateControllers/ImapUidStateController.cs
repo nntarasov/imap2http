@@ -1,4 +1,6 @@
 using ImapProtocol.Contracts;
+using ImapToHttpCore;
+using ServiceStack;
 
 namespace ImapProtocol.ImapStateControllers
 {
@@ -28,6 +30,13 @@ namespace ImapProtocol.ImapStateControllers
                         Context.CommandProvider.Write($"{cmd.Tag} OK UID STORE\r\n");
                     }
                     return storeResult;
+                case "COPY":
+                    var copyResult = new ImapCopyStateController().Run(Context, cmd);
+                    if (copyResult)
+                    {
+                        Context.CommandProvider.Write($"{cmd.Tag} OK UID COPY\r\n");
+                    }
+                    return copyResult;
                 default:
                     Context.CommandProvider.Write($"{cmd.Tag} BAD\r\n");
                     return true;

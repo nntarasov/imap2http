@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using ImapProtocol.Contracts;
+using ImapToHttpCore;
 
 namespace ImapProtocol.ImapStateControllers
 {
@@ -11,7 +12,8 @@ namespace ImapProtocol.ImapStateControllers
         {
             // <sequnce set> mbox
             // NO - Wrong name
-            var match = Regex.Match(cmd.Args, "^(?<sq>[^ ]+) (?<mbox>[^ ]+)^");
+            Context.CommandProvider.Write("* " + cmd.Args + "\r\n");
+            var match = Regex.Match(cmd.Args, "(?<sq>[^ ]+) (?<mbox>[^ ]+)$");
 
             if (!match.Success || !match.Groups["mbox"].Success || !match.Groups["sq"].Success
                 || string.IsNullOrWhiteSpace(match.Groups["mbox"].Value))
@@ -21,9 +23,11 @@ namespace ImapProtocol.ImapStateControllers
             }
 
             var mailbox = match.Groups["mbox"].Value;
-            var sqString = match.Value;
+            var sqString = match.Groups["sq"].Value;
+            var isUid = Context.States.Any(s => s.State == ImapState.Uid);
+            var idType = isUid ? MessageIdType.Uid : MessageIdType.Id;
             var sequenceSet = ImapCommon.GetMessageSequenceSet(sqString);
-            var uids = ImapCommon.ExtractRealMessageIds(Context, sequenceSet, MessageIdType.Id);
+            var uids = ImapCommon.ExtractRealMessageIds(Context, sequenceSet, idType);
 
             if (!Context.EntityProvider.DirectoryProvider.Copy(mailbox, uids.ToArray()))
             {
@@ -31,7 +35,10 @@ namespace ImapProtocol.ImapStateControllers
                 return true;
             }
 
-            Context.CommandProvider.Write($"{cmd.Tag} OK COPY\r\n");
+            if (!isUid)
+            {
+                Context.CommandProvider.Write($"{cmd.Tag} OK COPY\r\n");
+            }
             return true;
         } 
     }

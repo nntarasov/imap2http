@@ -35,13 +35,13 @@ namespace HttpProtocol
             name = name.ToUpper();
             
             var directories = GetAllDirectories();
-            if (!directories.Values.Contains(name))
+            if (!directories.Values.Select(v => v.ToUpper()).Contains(name))
             {
                 return false;
             }
 
             _currentDirectoryId = directories
-                .First(p => p.Value == name)
+                .First(p => p.Value.ToUpper() == name)
                 .Key;
             return true;
         }
@@ -213,7 +213,8 @@ namespace HttpProtocol
                 Body = dto.Body,
                 Date = dto.Date,
                 Headers = headersCapitalized,
-                UId = uid
+                UId = uid,
+                Flags = dto.Flags
             };
         }
 

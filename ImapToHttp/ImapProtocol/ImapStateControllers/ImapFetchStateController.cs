@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ImapProtocol.Contracts;
 using ImapToHttpCore;
+using ServiceStack;
 
 namespace ImapProtocol.ImapStateControllers
 {
@@ -213,6 +214,7 @@ namespace ImapProtocol.ImapStateControllers
 
             // Если команда была вызвана из SELECT ящика
             // не из UID и не из STORE
+            LoggerFactory.GetLogger().Print(Context.States.ToJson());
             if (Context.PrePeekState.State == ImapState.Selected)
             {
                 Context.CommandProvider.Write($"{cmd.Tag} OK FETCH\r\n");
@@ -236,7 +238,12 @@ namespace ImapProtocol.ImapStateControllers
 
             if (fetchData.IncludeFlags)
             {
-                messageBuilder.Append("FLAGS () ");
+                var flagsString = string.Empty;
+                if (message.Flags.Any())
+                {
+                    flagsString = message.Flags.Aggregate((f1, f2) => f1 + " " + f2);
+                }
+                messageBuilder.Append($"FLAGS ({flagsString}) ");
             }
 
             if (fetchData.IncludeInternaldate)

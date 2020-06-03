@@ -21,5 +21,8 @@ namespace HttpProtocol.Responses
         public string Body { get; set; }
         [DataMember(Name = "date")]
         public DateTime Date { get; set; }
+        
+        [DataMember(Name = "flags")]
+        public string[] Flags { get; set; }
     }
 }

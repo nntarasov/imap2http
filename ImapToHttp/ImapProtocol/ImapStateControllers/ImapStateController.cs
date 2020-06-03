@@ -18,7 +18,9 @@ namespace ImapProtocol.ImapStateControllers
                 Tag = cmd.Tag,
                 Args = cmd.Args
             });
-            return RunInternal(cmd);
+            var result = RunInternal(cmd);
+            context.TryPopState(out var state);
+            return result;
         }
 
         protected abstract bool RunInternal(ImapCommand cmd);
