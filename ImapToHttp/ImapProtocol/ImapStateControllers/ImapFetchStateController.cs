@@ -214,7 +214,6 @@ namespace ImapProtocol.ImapStateControllers
 
             // Если команда была вызвана из SELECT ящика
             // не из UID и не из STORE
-            LoggerFactory.GetLogger().Print(Context.States.ToJson());
             if (Context.PrePeekState.State == ImapState.Selected)
             {
                 Context.CommandProvider.Write($"{cmd.Tag} OK FETCH\r\n");

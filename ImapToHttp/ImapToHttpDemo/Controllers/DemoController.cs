@@ -187,6 +187,60 @@ namespace ImapToHttpDemo.Controllers
         {
             lock (StorageLock)
             {
+                if (!Storage.SetOnce)
+                {
+                    Storage.SetOnce = true;
+                    
+                    Storage.Directories[1].Messages.Add(new MessageData
+                     {
+                         UId = 14,
+                         Body = Storage.BodyHse1,
+                         Flags = new[] { "\\Recent" }.ToList(),
+                         Date = DateTime.Parse("Thu, 4 Jun 2020 16:10:18 +0000"),
+                         Headers = new Dictionary<string, string>
+                         {
+                             {"From", "=?UTF-8?B?0JLRi9GI0LrQsCDQntC90LvQsNC50L0=?= <elearn@hse.ru>"},
+                             {"To", "User <mail@ntarasov.ru>"},
+                             {"Subject", @"=?UTF-8?B?0J/RgNC+0LrRgtC+0YDQuNC90LM6INCy0L4=?=
+          =?UTF-8?B?0L/RgNC+0YHRiyDQuCDQvtGC0LLQtdGC0Ys=?="},
+                             {"Date", "Thu, 4 Jun 2020 16:10:18 +0000"},
+                             {"Message-Id", "<DQntC90xxLv@mail.yandex.ru>"},
+                             {"Content-Transfer-Encoding", "quoted-printable"},
+                             {"Content-Type", "text/html; charset=utf-8"},
+                             {"MIME-Version", "1.0"}
+                         }.Select(h => new MessageHeaderResponse
+                         {
+                             Key = h.Key,
+                             Value = h.Value
+                         }).ToArray()
+                     });
+                    
+                    Storage.Directories[1].Messages.Add(new MessageData
+                    {
+                        UId = 16,
+                        Body = Storage.BodyHse3,
+                        Flags = new[] { "\\Recent" }.ToList(),
+                        Date = DateTime.Parse("Thu, 4 Jun 2020 16:40:35 +0000"),
+                        Headers = new Dictionary<string, string>
+                        {
+                            {"From", "=?UTF-8?B?0KbQtdC90YLRgCDRgNCw0LfQstC40YLQuA==?= =?UTF-8?B?0Y8g0LrQsNGA0YzQtdGA0Ysg0JLQqNCt?= <career@hse.ru>"},
+                            {"To", "User <mail@ntarasov.ru>"},
+                            {"Subject", @"=?UTF-8?B?0JzQvdC+0LPQviDQu9C40LTQtdGA0YHQutC40YUg0L8=?=
+ =?UTF-8?B?0YDQvtCz0YDQsNC80Lwg0L3QsCDQu9C10YLQviArIA==?=
+ =?UTF-8?B?0L7QvdC70LDQudC9LdGN0LrRgdC60YPRgNGB0LjRjyA=?=
+ =?UTF-8?B?0L3QsCDQt9Cw0LLQvtC0IENvY2EtQ29sYQ==?="},
+                            {"Date", "Thu, 4 Jun 2020 16:40:35 +0000"},
+                            {"Message-Id", "<DQxeeeeetC90Lqeqweqv@mail.yandex.ru>"},
+                            {"Content-Transfer-Encoding", "quoted-printable"},
+                            {"Content-Type", "text/html; charset=utf-8"},
+                            {"MIME-Version", "1.0"}
+                        }.Select(h => new MessageHeaderResponse
+                        {
+                            Key = h.Key,
+                            Value = h.Value
+                        }).ToArray()
+                    });
+                }
                 if (!Storage.Directories.ContainsKey(request.directory_id))
                 {
                     return Fail;
@@ -250,7 +304,14 @@ namespace ImapToHttpDemo.Controllers
                 var messages = from.Messages.Where(m => request.uids.Contains(m.UId))
                     .ToList();
 
-                to.Messages.AddRange(messages);
+                to.Messages.AddRange(messages.Select(m => new MessageData
+                {
+                    Body = m.Body,
+                    Date = m.Date,
+                    Flags = m.Flags.ToList(),
+                    Headers = m.Headers,
+                    UId = Storage.GetNextUid()
+                }));
                 return Success;
             }
         }

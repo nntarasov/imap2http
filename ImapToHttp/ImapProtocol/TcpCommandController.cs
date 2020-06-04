@@ -33,7 +33,8 @@ namespace ImapProtocol
 
         public void Write(string command)
         {
-            Logger.Print(_sessionContext.ThreadId, MessageType.Out,  command.TrimEnd('\n').TrimEnd('\r'));
+            var logCommand = command.Length > 200 ? command.Substring(0, 200) + "..." : command;
+            Logger.Print(_sessionContext.ThreadId, MessageType.Out,  logCommand.TrimEnd('\n').TrimEnd('\r'));
             var responseBytes = Encoding.ASCII.GetBytes(command);
             try
             {

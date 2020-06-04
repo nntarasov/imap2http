@@ -21,6 +21,7 @@ namespace ImapToHttpDemo.Controllers
 
     public static class Storage
     {
+        public static bool SetOnce = false;
         public static IDictionary<int, DirectoryData> Directories { get; } =
             new[]
             {
@@ -38,7 +39,14 @@ namespace ImapToHttpDemo.Controllers
                 }
             }.ToDictionary(k => k.Id, v => v);
 
-
+        public static int GetNextUid()
+        {
+            var dirs = Directories.Where(d => d.Value.Messages.Any());
+            return dirs
+                       .SelectMany(d => d.Value.Messages)
+                       .Select(m => m.UId)
+                       .Max() + 100;
+        }
 
         static Storage()
         {
@@ -61,9 +69,9 @@ namespace ImapToHttpDemo.Controllers
  =?UTF-8?B?0LzQuCDQviDQstC+0LnQvdC1INC4IA==?=
  =?UTF-8?B?0LzQvdC+0LPQvtC1INC00YDRg9Cz0L7QtQ==?="},
                         {"Date", "Mon, 27 Apr 2020 15:03:37 +0000"},
-                        {"Message-Id", "<1255x51xxxx58oosx7920843@mail.yandex.ru>"},
+                        {"Message-Id", "<1d1xxxx58o9876o20843@mail.yandex.ru>"},
                         {"Content-Transfer-Encoding", "quoted-printable"},
-                        {"Content-Type", "text/html; charset=utf-8"},
+                        {"Content-Type", "text/plain; charset=utf-8"},
                         {"MIME-Version", "1.0"}
                     }.Select(h => new MessageHeaderResponse
                     {
@@ -99,34 +107,9 @@ namespace ImapToHttpDemo.Controllers
                   }).ToArray()
             });
             
-            
-            Directories[1].Messages.Add(new MessageData
+                 Directories[1].Messages.Add(new MessageData
             {
-                UId = 14,
-                Body = BodyHse1,
-                Flags = new[] { "\\Recent" }.ToList(),
-                Date = DateTime.Parse("Tue, 2 Jun 2020 16:10:18 +0000"),
-                Headers = new Dictionary<string, string>
-                {
-                    {"From", "=?UTF-8?B?0JLRi9GI0LrQsCDQntC90LvQsNC50L0=?= <elearn@hse.ru>"},
-                    {"To", "User <mail@ntarasov.ru>"},
-                    {"Subject", @"=?UTF-8?B?0J/RgNC+0LrRgtC+0YDQuNC90LM6INCy0L4=?=
- =?UTF-8?B?0L/RgNC+0YHRiyDQuCDQvtGC0LLQtdGC0Ys=?="},
-                    {"Date", "Tue, 2 Jun 2020 16:10:18 +0000"},
-                    {"Message-Id", "<DQntC90Lv@mail.yandex.ru>"},
-                    {"Content-Transfer-Encoding", "quoted-printable"},
-                    {"Content-Type", "text/html; charset=utf-8"},
-                    {"MIME-Version", "1.0"}
-                }.Select(h => new MessageHeaderResponse
-                {
-                    Key = h.Key,
-                    Value = h.Value
-                }).ToArray()
-            });
-            
-            Directories[1].Messages.Add(new MessageData
-            {
-                UId = 15,
+                UId = 22,
                 Body = BodyHse2,
                 Flags = new[] { "\\Recent" }.ToList(),
                 Date = DateTime.Parse("Mon, 3 Feb 2020 14:27:03 +0000"),
@@ -139,7 +122,7 @@ namespace ImapToHttpDemo.Controllers
  =?UTF-8?B?0LjQutC4LCDQndCw0YPRh9C90YvQtSDQsdC+0Lg=?=
  =?UTF-8?B?INC4INC80L3QvtCz0L7QtSDQtNGA0YPQs9C+0LU=?="},
                     {"Date", "Mon, 3 Feb 2020 14:27:03 +0000"},
-                    {"Message-Id", "<DQntC90Lqekqweqv@mail.yandex.ru>"},
+                    {"Message-Id", "<DlllQntC90Lqekqweqv@mail.yandex.ru>"},
                     {"Content-Transfer-Encoding", "quoted-printable"},
                     {"Content-Type", "text/html; charset=utf-8"},
                     {"MIME-Version", "1.0"}
@@ -150,37 +133,11 @@ namespace ImapToHttpDemo.Controllers
                 }).ToArray()
             });
             
-            
+            /*
             Directories[1].Messages.Add(new MessageData
             {
-                UId = 16,
-                Body = BodyHse3,
-                Flags = new[] { "\\Recent" }.ToList(),
-                Date = DateTime.Parse("Sun, 31 May 2020 06:40:35 +0000"),
-                Headers = new Dictionary<string, string>
-                {
-                    {"From", "=?UTF-8?B?0KbQtdC90YLRgCDRgNCw0LfQstC40YLQuA==?= =?UTF-8?B?0Y8g0LrQsNGA0YzQtdGA0Ysg0JLQqNCt?= <career@hse.ru>"},
-                    {"To", "User <mail@ntarasov.ru>"},
-                    {"Subject", @"=?UTF-8?B?0JzQvdC+0LPQviDQu9C40LTQtdGA0YHQutC40YUg0L8=?=
- =?UTF-8?B?0YDQvtCz0YDQsNC80Lwg0L3QsCDQu9C10YLQviArIA==?=
- =?UTF-8?B?0L7QvdC70LDQudC9LdGN0LrRgdC60YPRgNGB0LjRjyA=?=
- =?UTF-8?B?0L3QsCDQt9Cw0LLQvtC0IENvY2EtQ29sYQ==?="},
-                    {"Date", "Sun, 31 May 2020 06:40:35 +0000"},
-                    {"Message-Id", "<DQneeeeeetC90Lqeqweqv@mail.yandex.ru>"},
-                    {"Content-Transfer-Encoding", "quoted-printable"},
-                    {"Content-Type", "text/html; charset=utf-8"},
-                    {"MIME-Version", "1.0"}
-                }.Select(h => new MessageHeaderResponse
-                {
-                    Key = h.Key,
-                    Value = h.Value
-                }).ToArray()
-            });
-            
-            Directories[1].Messages.Add(new MessageData
-            {
-                UId = 17,
-                Body = BodyHse3,
+                UId = 23,
+                Body = BodyHse4,
                 Flags = new[] { "\\Recent" }.ToList(),
                 Date = DateTime.Parse("Wed, 6 May 2020 16:41:26 +0000"),
                 Headers = new Dictionary<string, string>
@@ -196,7 +153,7 @@ namespace ImapToHttpDemo.Controllers
  =?UTF-8?B?INC90LDRiNGDINC/0LDQvNGP0YLRjCwg?=
  =?UTF-8?B?0Lgg0LzQvdC+0LPQvtC1INC00YDRg9Cz0L7QtQ==?="},
                     {"Date", "Wed, 6 May 2020 16:41:26 +0000"},
-                    {"Message-Id", "<DQnWN6s-vgVAUf-MtC9@mail.yandex.ru>"},
+                    {"Message-Id", "<DQnWN6sxxxxx-vgVAUf-MtC9@mail.yandex.ru>"},
                     {"Content-Transfer-Encoding", "quoted-printable"},
                     {"Content-Type", "text/html; charset=utf-8"},
                     {"MIME-Version", "1.0"}
@@ -205,7 +162,7 @@ namespace ImapToHttpDemo.Controllers
                     Key = h.Key,
                     Value = h.Value
                 }).ToArray()
-            });
+            });*/
         }
 
         private const string BodyHse0 = @"
@@ -2324,7 +2281,7 @@ nter></body>
 </html>
 ";
 
-        private const string BodyHse1 = @"<!DOCTYPE html>
+        public const string BodyHse1 = @"<!DOCTYPE html>
 <html>
 <head>
 <meta name=3D""viewport"" content=3D""width=3Ddevice-width, initial-scale=3D1""=
@@ -4117,7 +4074,7 @@ ad_tracker/1323674?hash=3D6fr4c6s66aoa31iwgeupcxy5q8w17rz1ua7fpnpfyw64x53qj=
 t31qodt9r56fw7sqp9bbmszibib9x9z1bcmncxy3ur"" width=3D""1"" height=3D""1"" alt=3D=
 """" title=3D"""" border=3D""0""></td></tr></table></center></body></html>";
         
-        private const string BodyHse3 = @"
+        public const string BodyHse3 = @"
 <!DOCTYPE html>
 <html>
 <head>
